@@ -1,0 +1,15 @@
+{
+  "name": "@crm-digital-detectives/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "build": "node -e \"console.log('API build placeholder')\"",
+    "test": "node -e \"console.log('API tests placeholder')\"",
+    "lint": "node -e \"console.log('API lint placeholder')\""
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
