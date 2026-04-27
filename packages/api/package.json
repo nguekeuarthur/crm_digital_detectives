@@ -7,7 +7,8 @@
     "dev": "node --watch src/index.js",
     "build": "node -e \"console.log('API build placeholder')\"",
     "test": "node -e \"console.log('API tests placeholder')\"",
-    "lint": "node -e \"console.log('API lint placeholder')\""
+    "lint": "eslint src --ext .js --max-warnings=0",
+    "lint:fix": "eslint src --ext .js --fix"
   },
   "dependencies": {
     "express": "^4.21.2"
