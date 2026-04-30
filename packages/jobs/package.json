@@ -1,22 +1,20 @@
 {
-  "name": "@crm-digital-detectives/api",
+  "name": "@crm-digital-detectives/jobs",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "test": "node -e \"console.log('API tests placeholder')\"",
+    "test": "node -e \"console.log('JOBS tests placeholder')\"",
     "lint": "eslint src --ext .ts --max-warnings=0",
     "lint:fix": "eslint src --ext .ts --fix"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "bullmq": "^5.0.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.6.0",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^5.0.0",
+    "tsx": "^4.7.0"
   }
 }
