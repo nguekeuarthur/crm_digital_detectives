@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
@@ -11,7 +12,7 @@ export interface AuthRequest extends Request {
   };
 }
 
-export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -24,6 +25,31 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { userId: string; role: string; sessionId: string };
+
+    // Vérification de l'expiration des accès sous-traitant
+    if (payload.role === 'SOUS_TRAITANT') {
+      const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { accessExpiresAt: true },
+      });
+
+      if (user?.accessExpiresAt && user.accessExpiresAt < new Date()) {
+        await prisma.auditLog.create({
+          data: {
+            userId: payload.userId,
+            action: 'ACCESS_EXPIRED',
+            entity: 'User',
+            entityId: payload.userId,
+            ipAddress: req.ip,
+          },
+        });
+
+        return res.status(403).json({
+          error: { code: 'ACCESS_EXPIRED', message: 'Votre accès temporaire a expiré' },
+        });
+      }
+    }
+
     req.user = payload;
     next();
   } catch {

@@ -34,6 +34,7 @@ model User {
   role          Role       @default(ENQUETEUR)
   isTwoFactorEnabled Boolean @default(false)
   twoFactorSecret    String?
+  accessExpiresAt    DateTime?  // Expiration automatique pour les sous-traitants
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   
