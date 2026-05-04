@@ -1,6 +1,6 @@
 # ERD - CRM DigitalDetectives
 
-Mise a jour du modele relationnel apres ajout des entites de gestion documentaire, preuves et sous-traitance.
+Mise a jour du modele relationnel apres ajout des entites de gestion documentaire, preuves, sous-traitance et cycle financier.
 
 ```mermaid
 erDiagram
@@ -78,6 +78,59 @@ erDiagram
     enum status
   }
 
+  Service {
+    string id PK
+    string name
+    decimal unitPrice
+    decimal internalCost
+    string unit
+    string category
+    bool isActive
+  }
+
+  Quote {
+    string id PK
+    string mandateId FK
+    string clientId FK
+    json items
+    decimal totalHT
+    decimal totalTTC
+    decimal marginRate
+    enum status
+    datetime sentAt
+    datetime expiresAt
+  }
+
+  QuoteItem {
+    string quoteId PK, FK
+    string serviceId PK, FK
+    decimal quantity
+    decimal unitPrice
+    decimal discount
+  }
+
+  Contract {
+    string id PK
+    string mandateId FK
+    string templateId
+    json variables
+    enum status
+    datetime signedAt
+    string signProvider
+  }
+
+  Payment {
+    string id PK
+    string mandateId FK
+    string clientId FK
+    decimal amount
+    string currency
+    enum status
+    datetime dueDate
+    datetime paidAt
+    datetime matchedAt
+  }
+
   AuditLog {
     string id PK
     string userId FK
@@ -103,6 +156,16 @@ erDiagram
   User ||--o{ Subcontractor : subcontracts
   Mandate ||--o{ Subcontractor : grants_access
 
+  Mandate ||--o{ Quote : quotes
+  Client ||--o{ Quote : quoted_to
+  Quote ||--o{ QuoteItem : includes
+  Service ||--o{ QuoteItem : priced_by
+
+  Mandate ||--o{ Contract : contracts
+
+  Mandate ||--o{ Payment : payments
+  Client ||--o{ Payment : billed_to
+
   User ||--o{ AuditLog : logs
 ```
 
@@ -111,3 +174,5 @@ erDiagram
 - exifData est stocke en JSONB (champ Prisma Json) pour conserver les metadonnees brutes.
 - accessExpiresAt est obligatoire sur Subcontractor.
 - Index mandateId ajoutes sur Folder, Evidence et Subcontractor.
+- items est stocke en JSONB sur Quote pour snapshotter les prestations au moment de la generation.
+- Index dashboard finance: mandateId et status sur Quote/Contract/Payment, plus dueDate sur Payment.
