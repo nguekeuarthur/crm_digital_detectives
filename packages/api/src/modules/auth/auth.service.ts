@@ -1,9 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../../shared/prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
-const JWT_EXPIRES_IN = '1d';
+const REFRESH_SECRET = process.env.REFRESH_SECRET || 'superrefreshsecret';
+const ACCESS_TOKEN_EXPIRES_IN = '15m';
+const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 interface RegisterData {
   email: string;
@@ -50,21 +53,66 @@ export class AuthService {
       throw new Error('Mot de passe incorrect');
     }
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
+    return this.generateTokens(user.id, user.role);
+  }
+
+  static async refresh(refreshToken: string) {
+    try {
+      jwt.verify(refreshToken, REFRESH_SECRET) as { userId: string; role: string };
+      
+      const storedToken = await prisma.refreshToken.findUnique({
+        where: { token: refreshToken },
+        include: { user: true }
+      });
+
+      if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
+        throw new Error('Token de rafraîchissement invalide ou expiré');
+      }
+
+      // Rotation : on révoque l'ancien token
+      await prisma.refreshToken.update({
+        where: { id: storedToken.id },
+        data: { revoked: true }
+      });
+
+      // On en génère de nouveaux
+      return this.generateTokens(storedToken.userId, storedToken.user.role);
+    } catch {
+      throw new Error('Non autorisé');
+    }
+  }
+
+  static async logout(refreshToken: string) {
+    await prisma.refreshToken.updateMany({
+      where: { token: refreshToken },
+      data: { revoked: true }
+    });
+  }
+
+  private static async generateTokens(userId: string, role: string) {
+    const sessionId = uuidv4();
+
+    const accessToken = jwt.sign(
+      { userId, role, sessionId },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
     );
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
-      token,
-    };
+    const refreshToken = jwt.sign(
+      { userId, role },
+      REFRESH_SECRET,
+      { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
+    );
+
+    // Stockage du refresh token en base
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
+      }
+    });
+
+    return { accessToken, refreshToken };
   }
 }

@@ -39,6 +39,17 @@ model User {
   
   auditLogs     AuditLog[]
   mandats       Mandat[]   @relation("EnqueteurMandats")
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model Client {
