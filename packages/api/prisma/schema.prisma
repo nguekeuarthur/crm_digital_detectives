@@ -23,6 +23,28 @@ enum MandateStatus {
   CLOSED
 }
 
+enum FolderType {
+  ADMIN
+  EXCHANGES
+  CONTRACTS
+  CLIENT_DOCS
+  EVIDENCE
+  RESEARCH
+  AI_NOTES
+  CUSTOM
+}
+
+enum EvidenceSource {
+  NIKON_CLOUD
+  MANUAL
+  OTHER
+}
+
+enum SubcontractorStatus {
+  ACTIVE
+  EXPIRED
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -34,6 +56,9 @@ model User {
   createdMandates Mandate[]    @relation("MandatesCreatedBy")
   mandateUsers   MandateUser[]
   auditLogs      AuditLog[]
+  uploadedFiles  File[]         @relation("UploadedFiles")
+  observedEvidence Evidence[]   @relation("EvidenceObservedBy")
+  subcontractorAssignments Subcontractor[]
 
   @@index([email])
 }
@@ -75,11 +100,93 @@ model Mandate {
   client    Client       @relation(fields: [clientId], references: [id])
   creator   User         @relation("MandatesCreatedBy", fields: [createdBy], references: [id])
   users     MandateUser[]
+  folders   Folder[]
+  evidences Evidence[]
+  subcontractors Subcontractor[]
 
   @@index([clientId])
   @@index([createdBy])
   @@index([status])
   @@index([deletedAt])
+}
+
+model Folder {
+  id        String     @id @default(uuid())
+  mandateId String
+  name      String
+  type      FolderType
+  parentId  String?
+  createdAt DateTime   @default(now())
+
+  mandate   Mandate    @relation(fields: [mandateId], references: [id], onDelete: Cascade)
+  parent    Folder?    @relation("FolderToFolder", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Folder[]   @relation("FolderToFolder")
+  files     File[]
+
+  @@index([mandateId])
+  @@index([parentId])
+}
+
+model File {
+  id          String    @id @default(uuid())
+  folderId    String
+  name        String
+  mimeType    String
+  size        BigInt
+  storagePath String
+  uploadedBy  String
+  exifData    Json?
+  geoLat      Decimal?  @db.Decimal(10, 7)
+  geoLng      Decimal?  @db.Decimal(10, 7)
+  capturedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  folder      Folder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  uploader    User      @relation("UploadedFiles", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  evidence    Evidence?
+
+  @@index([folderId])
+  @@index([uploadedBy])
+  @@unique([storagePath])
+}
+
+model Evidence {
+  id             String         @id @default(uuid())
+  fileId         String         @unique
+  mandateId      String
+  observerUserId String?
+  description    String?
+  capturedAt     DateTime?
+  location       String?
+  source         EvidenceSource
+  createdAt      DateTime       @default(now())
+
+  file           File           @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  mandate        Mandate        @relation(fields: [mandateId], references: [id], onDelete: Cascade)
+  observer       User?          @relation("EvidenceObservedBy", fields: [observerUserId], references: [id], onDelete: SetNull)
+
+  @@index([mandateId])
+  @@index([observerUserId])
+}
+
+model Subcontractor {
+  id              String              @id @default(uuid())
+  userId          String
+  specialty       String
+  hourlyRate      Decimal             @db.Decimal(10, 2)
+  accessExpiresAt DateTime
+  mandateId       String
+  hoursWorked     Decimal             @default(0) @db.Decimal(10, 2)
+  status          SubcontractorStatus @default(ACTIVE)
+  createdAt       DateTime            @default(now())
+
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mandate         Mandate             @relation(fields: [mandateId], references: [id], onDelete: Cascade)
+
+  @@index([mandateId])
+  @@index([userId])
+  @@index([status])
+  @@unique([userId, mandateId])
 }
 
 model MandateUser {
