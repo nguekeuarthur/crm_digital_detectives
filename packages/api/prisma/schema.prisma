@@ -12,94 +12,102 @@ datasource db {
 
 enum Role {
   ADMIN
-  ENQUETEUR
-  SOUS_TRAITANT
+  INVESTIGATOR
+  SUBCONTRACTOR
 }
 
-enum MandatStatus {
-  OUVERT
-  EN_COURS
-  EN_ATTENTE_PREUVES
-  A_VALIDER
-  TERMINE
-  ANNULE
+enum MandateStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  CLOSED
 }
 
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  password      String
-  firstName     String
-  lastName      String
-  role          Role       @default(ENQUETEUR)
-  isTwoFactorEnabled Boolean @default(false)
-  twoFactorSecret    String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  
-  auditLogs     AuditLog[]
-  mandats       Mandat[]   @relation("EnqueteurMandats")
-  refreshTokens RefreshToken[]
-}
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime     @default(now())
+  lastLogin    DateTime?
 
-model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  revoked   Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdMandates Mandate[]    @relation("MandatesCreatedBy")
+  mandateUsers   MandateUser[]
+  auditLogs      AuditLog[]
+
+  @@index([email])
 }
 
 model Client {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  firstName     String
-  lastName      String
-  phone         String?
-  address       String?
-  company       String?
-  wpId          String?    @unique // ID WordPress pour la sync
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  
-  mandats       Mandat[]
+  id        String    @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String    @unique
+  phone     String?
+  company   String?
+  address   String?
+  wpUserId  String?   @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  mandates  Mandate[]
+
+  @@index([email])
+  @@index([wpUserId])
 }
 
-model Mandat {
-  id            String       @id @default(uuid())
-  title         String
-  description   String?
-  status        MandatStatus @default(OUVERT)
-  clientId      String
-  client        Client       @relation(fields: [clientId], references: [id])
-  enqueteurId   String?
-  enqueteur     User?        @relation("EnqueteurMandats", fields: [enqueteurId], references: [id])
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  
-  dossiers      Dossier[]
+model Mandate {
+  id        String       @id @default(uuid())
+  clientId  String
+  title     String
+  type      String
+  status    MandateStatus @default(DRAFT)
+  priority  Int          @default(0)
+  startDate DateTime?
+  endDate   DateTime?
+  notes     String?
+  createdBy String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
+
+  client    Client       @relation(fields: [clientId], references: [id])
+  creator   User         @relation("MandatesCreatedBy", fields: [createdBy], references: [id])
+  users     MandateUser[]
+
+  @@index([clientId])
+  @@index([createdBy])
+  @@index([status])
+  @@index([deletedAt])
 }
 
-model Dossier {
-  id        String   @id @default(uuid())
-  name      String
-  mandatId  String
-  mandat    Mandat   @relation(fields: [mandatId], references: [id])
-  isSystem  Boolean  @default(false) // Pour les 7 dossiers de base
-  createdAt DateTime @default(now())
+model MandateUser {
+  mandateId String
+  userId    String
+  role      Role
+  assignedAt DateTime @default(now())
+
+  mandate Mandate @relation(fields: [mandateId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([mandateId, userId])
+  @@index([userId])
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  action    String
-  entity    String
-  entityId  String?
-  oldValue  Json?
-  newValue  Json?
-  ipAddress String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  payload    Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
