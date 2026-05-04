@@ -1,12 +1,12 @@
-import express, { Request, Response } from 'express';
+import { app } from './app';
 
-const app = express();
 const port = process.env.PORT || 3000;
 
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok' });
-});
-
 app.listen(port, () => {
-  console.log(`API running on http://localhost:${port}`);
+  console.log(`
+🚀 CRM Digitaldetectives API
+📡 Statut: En ligne
+🔗 URL: http://localhost:${port}
+🛠️  Mode: ${process.env.NODE_ENV || 'development'}
+  `);
 });
