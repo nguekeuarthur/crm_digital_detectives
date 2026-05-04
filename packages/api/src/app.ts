@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
+import { authenticate } from './shared/middlewares/authenticate';
 import { authRoutes } from './modules/auth/auth.routes';
 
 const app = express();
@@ -26,8 +27,17 @@ const swaggerOptions = {
         url: `http://localhost:${process.env.PORT || 3000}/api/v1`,
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
   },
-  apis: ['./src/modules/**/*.ts'], // Chemin vers les annotations Swagger
+  apis: ['./src/modules/**/*.ts'],
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -46,10 +56,10 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Documentation
+// Documentation (accessible sans auth)
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Health Check
+// Health Check (accessible sans auth)
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ 
     status: 'ok', 
@@ -59,8 +69,18 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// Routes API v1
+// ─── Routes publiques (pas besoin de token) ───
 app.use('/api/v1/auth', authRoutes);
+
+// ─── Middleware d'authentification global ───
+// Toutes les routes déclarées APRÈS cette ligne sont protégées
+app.use('/api/v1', authenticate);
+
+// ─── Routes protégées (nécessitent un token valide) ───
+// Les futurs modules seront ajoutés ici :
+// app.use('/api/v1/clients', clientRoutes);
+// app.use('/api/v1/mandats', mandatRoutes);
+// app.use('/api/v1/files', fileRoutes);
 
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
