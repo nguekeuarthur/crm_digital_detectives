@@ -66,7 +66,7 @@ export class MandatService {
     const { status, clientId, enqueteurId, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
-    const where: any = { deletedAt: null };
+    const where: Record<string, unknown> = { deletedAt: null };
     if (status) where.status = status;
     if (clientId) where.clientId = clientId;
     if (enqueteurId) where.enqueteurId = enqueteurId;
@@ -250,7 +250,7 @@ export class MandatService {
     return updated;
   }
 
-  private static validateStatusTransition(current: MandatStatus, next: MandatStatus) {
+  private static validateStatusTransition(current: MandatStatus, _next: MandatStatus) {
     // Un mandat TERMINE ou ANNULE ne peut plus être modifié
     if (current === MandatStatus.TERMINE || current === MandatStatus.ANNULE) {
       throw new ValidationError(`Transition impossible : le mandat est déjà ${current}`);

@@ -1,6 +1,5 @@
 import { prisma } from '../../shared/prisma';
 import { CustomFieldType, CustomFieldEntity } from '@prisma/client';
-import { ValidationError } from '../../shared/errors';
 import { AuditService } from '../audit/audit.service';
 
 export class CustomFieldService {
@@ -11,7 +10,7 @@ export class CustomFieldService {
     name: string;
     type: CustomFieldType;
     entityType: CustomFieldEntity;
-    options?: any;
+    options?: unknown;
   }, userId: string) {
     const definition = await prisma.customFieldDefinition.create({
       data: {

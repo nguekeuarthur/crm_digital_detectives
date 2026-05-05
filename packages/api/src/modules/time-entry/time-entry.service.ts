@@ -1,7 +1,6 @@
 import { prisma } from '../../shared/prisma';
 import { ValidationError } from '../../shared/errors';
 import { AuditService } from '../audit/audit.service';
-import { ActivityService } from '../mandat/activity.service';
 
 export class TimeEntryService {
   /**
