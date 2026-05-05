@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,6 +5,119 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String         @id @default(uuid())
+  email              String         @unique
+  password           String
+  firstName          String
+  lastName           String
+  role               Role           @default(ENQUETEUR)
+  isTwoFactorEnabled Boolean        @default(false)
+  twoFactorSecret    String?
+  accessExpiresAt    DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  auditLogs          AuditLog[]
+  mandats            Mandat[]       @relation("EnqueteurMandats")
+  activities         Activity[]
+  refreshTokens      RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  firstName String
+  lastName  String
+  phone     String?
+  address   String?
+  company   String?
+  status    ClientStatus @default(PROSPECT)
+  wpId      String?  @unique
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?    // Pour le soft delete
+  mandats   Mandat[]
+}
+
+model Mandat {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  status      MandatStatus @default(OUVERT)
+  clientId    String
+  enqueteurId String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?    // Pour le soft delete
+  dossiers    Dossier[]
+  activities  Activity[]
+  client      Client       @relation(fields: [clientId], references: [id])
+  enqueteur   User?        @relation("EnqueteurMandats", fields: [enqueteurId], references: [id])
+}
+
+model Dossier {
+  id        String   @id @default(uuid())
+  name      String
+  mandatId  String
+  parentId  String?  // Pour la hiérarchie
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  mandat    Mandat   @relation(fields: [mandatId], references: [id])
+  parent    Dossier? @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children  Dossier[] @relation("FolderHierarchy")
+  files     File[]
+}
+
+model File {
+  id        String    @id @default(uuid())
+  name      String
+  key       String    // Chemin relatif dans S3/Swift
+  size      Int
+  mimeType  String
+  folderId  String
+  userId    String?
+  exifData  Json?     // Données EXIF brutes
+  geoLat    Float?    // Latitude normalisée
+  geoLng    Float?    // Longitude normalisée
+  createdAt DateTime  @default(now())
+  deletedAt DateTime? // Pour le soft delete
+  folder    Dossier   @relation(fields: [folderId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Activity {
+  id        String       @id @default(uuid())
+  mandatId  String
+  userId    String
+  type      ActivityType
+  payload   Json?
+  createdAt DateTime     @default(now())
+  mandat    Mandat       @relation(fields: [mandatId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
 }
 
 enum Role {
@@ -25,82 +135,19 @@ enum MandatStatus {
   ANNULE
 }
 
-model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  password      String
-  firstName     String
-  lastName      String
-  role          Role       @default(ENQUETEUR)
-  isTwoFactorEnabled Boolean @default(false)
-  twoFactorSecret    String?
-  accessExpiresAt    DateTime?  // Expiration automatique pour les sous-traitants
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  
-  auditLogs     AuditLog[]
-  mandats       Mandat[]   @relation("EnqueteurMandats")
-  refreshTokens RefreshToken[]
+enum ClientStatus {
+  PROSPECT
+  ACTIF
+  INACTIF
 }
 
-model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  revoked   Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-model Client {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  firstName     String
-  lastName      String
-  phone         String?
-  address       String?
-  company       String?
-  wpId          String?    @unique // ID WordPress pour la sync
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  
-  mandats       Mandat[]
-}
-
-model Mandat {
-  id            String       @id @default(uuid())
-  title         String
-  description   String?
-  status        MandatStatus @default(OUVERT)
-  clientId      String
-  client        Client       @relation(fields: [clientId], references: [id])
-  enqueteurId   String?
-  enqueteur     User?        @relation("EnqueteurMandats", fields: [enqueteurId], references: [id])
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  
-  dossiers      Dossier[]
-}
-
-model Dossier {
-  id        String   @id @default(uuid())
-  name      String
-  mandatId  String
-  mandat    Mandat   @relation(fields: [mandatId], references: [id])
-  isSystem  Boolean  @default(false) // Pour les 7 dossiers de base
-  createdAt DateTime @default(now())
-}
-
-model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  action    String
-  entity    String
-  entityId  String?
-  oldValue  Json?
-  newValue  Json?
-  ipAddress String?
-  createdAt DateTime @default(now())
+enum ActivityType {
+  FILE_ADDED
+  STATUS_CHANGED
+  EMAIL
+  CALL
+  WHATSAPP
+  NOTE
+  ASSIGNMENT
+  MANDAT_CREATED
 }

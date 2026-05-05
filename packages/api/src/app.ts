@@ -10,8 +10,16 @@ import swaggerUi from 'swagger-ui-express';
 
 import { authenticate } from './shared/middlewares/authenticate';
 import { authRoutes } from './modules/auth/auth.routes';
+import { auditRoutes } from './modules/audit/audit.routes';
+import { mandatRoutes } from './modules/mandat/mandat.routes';
+import { clientRoutes } from './modules/client/client.routes';
+import { fileRoutes } from './modules/file/file.routes';
+import { initCronJobs } from './shared/cron';
 
 const app = express();
+
+// Initialisation des tâches de fond
+initCronJobs();
 
 // Configuration Swagger
 const swaggerOptions = {
@@ -77,19 +85,37 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1', authenticate);
 
 // ─── Routes protégées (nécessitent un token valide) ───
+app.use('/api/v1/audit', auditRoutes);
+app.use('/api/v1/mandates', mandatRoutes);
+app.use('/api/v1/clients', clientRoutes);
+app.use('/api/v1', fileRoutes);
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
 // app.use('/api/v1/mandats', mandatRoutes);
 // app.use('/api/v1/files', fileRoutes);
 
+import { ZodError } from 'zod';
+
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error & { status?: number; code?: string }, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error & { status?: number; code?: string; details?: any }, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
+
+  if (err instanceof ZodError) {
+    return res.status(422).json({
+      error: {
+        message: 'Erreur de validation des données',
+        code: 'VALIDATION_ERROR',
+        details: err.errors.map(e => ({ path: e.path, message: e.message }))
+      }
+    });
+  }
+
   res.status(err.status || 500).json({
     error: {
       message: err.message || 'Erreur Interne du Serveur',
-      code: err.code || 'INTERNAL_ERROR'
+      code: err.code || 'INTERNAL_ERROR',
+      details: err.details
     }
   });
 });

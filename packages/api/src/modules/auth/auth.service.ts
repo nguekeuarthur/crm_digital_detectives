@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../../shared/prisma';
+import { AuditService } from '../audit/audit.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 const REFRESH_SECRET = process.env.REFRESH_SECRET || 'superrefreshsecret';
@@ -22,7 +23,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    return prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -38,6 +39,15 @@ export class AuthService {
         role: true,
       }
     });
+
+    await AuditService.log({
+      userId: user.id,
+      action: 'REGISTER',
+      entity: 'User',
+      entityId: user.id,
+    });
+
+    return user;
   }
 
   static async login(email: string, password: string) {
@@ -53,7 +63,17 @@ export class AuthService {
       throw new Error('Mot de passe incorrect');
     }
 
-    return this.generateTokens(user.id, user.role);
+    const tokens = await this.generateTokens(user.id, user.role);
+
+    // Audit Log: Login
+    await AuditService.log({
+      userId: user.id,
+      action: 'LOGIN',
+      entity: 'User',
+      entityId: user.id,
+    });
+
+    return tokens;
   }
 
   static async refresh(refreshToken: string) {
@@ -83,10 +103,24 @@ export class AuthService {
   }
 
   static async logout(refreshToken: string) {
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      select: { userId: true }
+    });
+
     await prisma.refreshToken.updateMany({
       where: { token: refreshToken },
       data: { revoked: true }
     });
+
+    if (storedToken) {
+      await AuditService.log({
+        userId: storedToken.userId,
+        action: 'LOGOUT',
+        entity: 'User',
+        entityId: storedToken.userId,
+      });
+    }
   }
 
   private static async generateTokens(userId: string, role: string) {
