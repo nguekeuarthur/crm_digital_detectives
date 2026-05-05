@@ -4,6 +4,7 @@ import { MandatService } from './mandat.service';
 import { MandatStatus, ActivityType } from '@prisma/client';
 import { ActivityService } from './activity.service';
 import { DossierService } from './dossier.service';
+import { TimeEntryService } from '../time-entry/time-entry.service';
 
 export class MandatController {
   static async create(req: AuthRequest, res: Response) {
@@ -94,5 +95,21 @@ export class MandatController {
   static async deleteFolder(req: AuthRequest, res: Response) {
     await DossierService.deleteDossier(req.params.folderId, req.user!.userId);
     res.status(204).send();
+  }
+
+  static async assignSubcontractor(req: AuthRequest, res: Response) {
+    const assignment = await MandatService.assignSubcontractorToMandat({
+      mandatId: req.params.id,
+      subcontractorId: req.body.subcontractorId,
+      hourlyRate: req.body.hourlyRate,
+      startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
+      endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
+    }, req.user!.userId);
+    res.status(201).json(assignment);
+  }
+
+  static async getTimeEntries(req: AuthRequest, res: Response) {
+    const entries = await TimeEntryService.getSummaryForMandat(req.params.id);
+    res.json(entries);
   }
 }

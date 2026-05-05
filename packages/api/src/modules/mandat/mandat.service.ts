@@ -199,6 +199,41 @@ export class MandatService {
     return updated;
   }
 
+  static async assignSubcontractorToMandat(data: {
+    mandatId: string;
+    subcontractorId: string;
+    hourlyRate: number;
+    startDate?: Date;
+    endDate?: Date;
+  }, adminId: string) {
+    const assignment = await prisma.mandatSubcontractor.create({
+      data: {
+        mandatId: data.mandatId,
+        subcontractorId: data.subcontractorId,
+        hourlyRate: data.hourlyRate,
+        startDate: data.startDate,
+        endDate: data.endDate
+      }
+    });
+
+    await AuditService.log({
+      userId: adminId,
+      action: 'ASSIGN_SUBCONTRACTOR',
+      entity: 'Mandat',
+      entityId: data.mandatId,
+      newValue: { subcontractorId: data.subcontractorId, rate: data.hourlyRate }
+    });
+
+    await ActivityService.push({
+      mandatId: data.mandatId,
+      userId: adminId,
+      type: 'ASSIGNMENT',
+      payload: { subcontractorId: data.subcontractorId, message: "Sous-traitant affecté au dossier" }
+    });
+
+    return assignment;
+  }
+
   static async unassignUser(mandatId: string, userId: string) {
     const updated = await prisma.mandat.update({
       where: { id: mandatId },

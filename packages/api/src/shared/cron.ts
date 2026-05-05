@@ -19,8 +19,14 @@ export const initCronJobs = () => {
     }
   });
 
-  // Tu peux ajouter d'autres tâches ici, par exemple :
-  // - Vérification des mandats en retard
-  // - Envoi d'emails de rappel
-  // - Nettoyage des fichiers temporaires
+  // 2. Révocation des accès sous-traitants expirés (Tous les jours à minuit)
+  cron.schedule('0 0 * * *', async () => {
+    console.log('🚫 [CRON] Vérification des accès sous-traitants expirés...');
+    try {
+      const { SubcontractorService } = await import('../modules/subcontractor/subcontractor.service');
+      await SubcontractorService.revokeExpiredAccess();
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors de la révocation des accès:', error);
+    }
+  });
 };

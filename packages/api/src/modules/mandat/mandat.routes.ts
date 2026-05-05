@@ -110,4 +110,22 @@ router.post('/:id/folders', authorizeMandat, MandatController.createFolder);
 router.patch('/:id/folders/:folderId', authorizeMandat, MandatController.renameFolder);
 router.delete('/:id/folders/:folderId', authorizeMandat, MandatController.deleteFolder);
 
+/**
+ * @openapi
+ * /mandates/{id}/subcontractors:
+ *   post:
+ *     summary: Affecter un sous-traitant à ce mandat (Admin)
+ *     tags: [Mandates]
+ */
+router.post('/:id/subcontractors', authorize('ADMIN'), MandatController.assignSubcontractor);
+
+/**
+ * @openapi
+ * /mandates/{id}/time-entries:
+ *   get:
+ *     summary: Récupérer le résumé des heures saisies pour ce mandat
+ *     tags: [Mandates]
+ */
+router.get('/:id/time-entries', authorizeMandat, MandatController.getTimeEntries);
+
 export { router as mandatRoutes };
