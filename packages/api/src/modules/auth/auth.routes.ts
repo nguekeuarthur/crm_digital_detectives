@@ -1,104 +1,53 @@
 import { Router } from 'express';
 import { AuthController } from './auth.controller';
+import { authenticate } from '../../shared/middlewares/authenticate';
 
 const router = Router();
 
-/**
- * @openapi
- * /auth/register:
- *   post:
- *     summary: Inscription d'un nouvel utilisateur
- *     description: "🔓 Route publique — aucune authentification requise"
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, password, firstName, lastName]
- *             properties:
- *               email: { type: string }
- *               password: { type: string }
- *               firstName: { type: string }
- *               lastName: { type: string }
- *     responses:
- *       201:
- *         description: Utilisateur créé
- *       400:
- *         description: Données invalides
- */
+// --- PUBLIC ROUTES ---
 router.post('/register', AuthController.register);
-
-/**
- * @openapi
- * /auth/login:
- *   post:
- *     summary: Connexion utilisateur
- *     description: "🔓 Route publique — aucune authentification requise"
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, password]
- *             properties:
- *               email: { type: string }
- *               password: { type: string }
- *     responses:
- *       200:
- *         description: Succès, retourne { accessToken, refreshToken }
- *       401:
- *         description: Email ou mot de passe incorrect
- */
 router.post('/login', AuthController.login);
-
-/**
- * @openapi
- * /auth/refresh:
- *   post:
- *     summary: Rafraîchir l'access token
- *     description: "🔓 Route publique — utilise le refreshToken au lieu du Bearer"
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [refreshToken]
- *             properties:
- *               refreshToken: { type: string }
- *     responses:
- *       200:
- *         description: Nouveaux tokens (rotation effectuée)
- *       401:
- *         description: Refresh token invalide ou révoqué
- */
+router.post('/login-2fa', AuthController.login2FA);
 router.post('/refresh', AuthController.refresh);
+router.post('/logout', AuthController.logout);
+
+// --- PROTECTED ROUTES (Profile & 2FA Management) ---
+router.use(authenticate);
 
 /**
  * @openapi
- * /auth/logout:
- *   post:
- *     summary: Déconnexion (révocation du refresh token)
- *     description: "🔓 Route publique — révoque le refresh token en base"
+ * /auth/me:
+ *   get:
+ *     summary: Récupérer le profil de l'utilisateur connecté
  *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [refreshToken]
- *             properties:
- *               refreshToken: { type: string }
- *     responses:
- *       204:
- *         description: Déconnecté avec succès
  */
-router.post('/logout', AuthController.logout);
+router.get('/me', AuthController.getMe);
+
+/**
+ * @openapi
+ * /auth/2fa/setup:
+ *   post:
+ *     summary: Générer le QR Code pour configurer la 2FA
+ *     tags: [Auth]
+ */
+router.post('/2fa/setup', AuthController.setup2FA);
+
+/**
+ * @openapi
+ * /auth/2fa/verify:
+ *   post:
+ *     summary: Vérifier le code et activer la 2FA
+ *     tags: [Auth]
+ */
+router.post('/2fa/verify', AuthController.verify2FA);
+
+/**
+ * @openapi
+ * /auth/2fa/disable:
+ *   post:
+ *     summary: Désactiver la 2FA (Admin ou Propriétaire)
+ *     tags: [Auth]
+ */
+router.post('/2fa/disable', AuthController.disable2FA);
 
 export { router as authRoutes };

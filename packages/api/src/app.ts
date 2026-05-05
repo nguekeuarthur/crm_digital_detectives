@@ -14,7 +14,18 @@ import { auditRoutes } from './modules/audit/audit.routes';
 import { mandatRoutes } from './modules/mandat/mandat.routes';
 import { clientRoutes } from './modules/client/client.routes';
 import { fileRoutes } from './modules/file/file.routes';
+import { customFieldRoutes } from './modules/custom-fields/custom-field.routes';
+import { subcontractorRoutes } from './modules/subcontractor/subcontractor.routes';
+import { timeEntryRoutes } from './modules/time-entry/time-entry.routes';
+import { billingRoutes } from './modules/billing/billing.routes';
+import { syncRouter, webhookRouter } from './modules/sync/sync.routes';
 import { initCronJobs } from './shared/cron';
+// Les futurs modules seront ajoutés ici :
+// app.use('/api/v1/clients', clientRoutes);
+// app.use('/api/v1/mandats', mandatRoutes);
+// app.use('/api/v1/files', fileRoutes);
+
+import { ZodError } from 'zod';
 
 const app = express();
 
@@ -89,16 +100,16 @@ app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/mandates', mandatRoutes);
 app.use('/api/v1/clients', clientRoutes);
 app.use('/api/v1', fileRoutes);
-// Les futurs modules seront ajoutés ici :
-// app.use('/api/v1/clients', clientRoutes);
-// app.use('/api/v1/mandats', mandatRoutes);
-// app.use('/api/v1/files', fileRoutes);
-
-import { ZodError } from 'zod';
+app.use('/api/v1/custom-fields', customFieldRoutes);
+app.use('/api/v1/subcontractors', subcontractorRoutes);
+app.use('/api/v1/time-entries', timeEntryRoutes);
+app.use('/api/v1/billing', billingRoutes);
+app.use('/api/v1/sync', syncRouter);
+app.use('/api/v1/webhooks', webhookRouter);
 
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error & { status?: number; code?: string; details?: any }, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error & { status?: number; code?: string; details?: unknown }, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
 
   if (err instanceof ZodError) {

@@ -63,6 +63,14 @@ export class AuthService {
       throw new Error('Mot de passe incorrect');
     }
 
+    // Si la 2FA est activée, on ne génère pas encore les tokens définitifs
+    if (user.isTwoFactorEnabled) {
+      return {
+        require2FA: true,
+        userId: user.id
+      };
+    }
+
     const tokens = await this.generateTokens(user.id, user.role);
 
     // Audit Log: Login
@@ -123,6 +131,29 @@ export class AuthService {
     }
   }
 
+  static async login2FA(userId: string, code: string) {
+    const { TwoFactorService } = await import('./two-factor.service');
+    const isValid = await TwoFactorService.validateCode(userId, code);
+
+    if (!isValid) {
+      throw new Error('Code TOTP invalide');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Utilisateur non trouvé');
+
+    const tokens = await this.generateTokens(user.id, user.role);
+
+    await AuditService.log({
+      userId: user.id,
+      action: 'LOGIN_2FA_SUCCESS',
+      entity: 'User',
+      entityId: user.id,
+    });
+
+    return tokens;
+  }
+
   private static async generateTokens(userId: string, role: string) {
     const sessionId = uuidv4();
 
@@ -148,5 +179,20 @@ export class AuthService {
     });
 
     return { accessToken, refreshToken };
+  }
+
+  static async getMe(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isTwoFactorEnabled: true
+      }
+    });
+    return user;
   }
 }

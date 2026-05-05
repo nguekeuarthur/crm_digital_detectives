@@ -23,6 +23,47 @@ model User {
   mandats            Mandat[]       @relation("EnqueteurMandats")
   activities         Activity[]
   refreshTokens      RefreshToken[]
+  mandatAssignments  MandatSubcontractor[]
+  timeEntries        TimeEntry[]
+}
+
+model MandatSubcontractor {
+  id              String   @id @default(uuid())
+  mandatId        String
+  subcontractorId String
+  hourlyRate      Float    // Taux horaire négocié pour ce mandat
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime @default(now())
+
+  mandat        Mandat @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+  subcontractor User   @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+
+  @@unique([mandatId, subcontractorId])
+}
+
+model TimeEntry {
+  id              String   @id @default(uuid())
+  subcontractorId String
+  mandatId        String
+  date            DateTime
+  hours           Float
+  description     String?
+  validated       Boolean  @default(false) // Doit être validé par l'Admin
+  invoiced        Boolean  @default(false) // Marqué comme facturé/payé
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subcontractor   User   @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  mandat          Mandat @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+}
+
+model SubcontractorInvite {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model RefreshToken {
@@ -65,6 +106,8 @@ model Mandat {
   activities  Activity[]
   client      Client       @relation(fields: [clientId], references: [id])
   enqueteur   User?        @relation("EnqueteurMandats", fields: [enqueteurId], references: [id])
+  subcontractors MandatSubcontractor[]
+  timeEntries    TimeEntry[]
 }
 
 model Dossier {
@@ -139,6 +182,40 @@ enum ClientStatus {
   PROSPECT
   ACTIF
   INACTIF
+}
+
+model CustomFieldDefinition {
+  id         String            @id @default(uuid())
+  name       String
+  type       CustomFieldType
+  options    Json?             // Pour les SELECT : ["Option 1", "Option 2"]
+  entityType CustomFieldEntity
+  createdAt  DateTime          @default(now())
+  values     CustomFieldValue[]
+}
+
+model CustomFieldValue {
+  id                String                @id @default(uuid())
+  fieldDefinitionId String
+  entityId          String                // ID du Mandat ou du Client
+  entityType        CustomFieldEntity
+  value             String                // Toujours stocké en string, casté selon le type
+  definition        CustomFieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([fieldDefinitionId, entityId]) // Une seule valeur par champ par entité
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  SELECT
+}
+
+enum CustomFieldEntity {
+  MANDATE
+  CLIENT
 }
 
 enum ActivityType {
