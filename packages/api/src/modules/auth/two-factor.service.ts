@@ -37,13 +37,14 @@ export class TwoFactorService {
     console.log(`[2FA Debug] Code reçu: "${code}" | Secret en DB: "${user.twoFactorSecret.substring(0, 6)}..."`);
 
     try {
-      // verifySync prend le secret en paramètre directement — pas de classe à configurer
-      const isValid = verifySync({
+      // verifySync retourne un objet { valid: boolean } dans otplib v13
+      const result = verifySync({
         token: code,
         secret: user.twoFactorSecret,
-        window: 4
+        window: 1
       });
 
+      const isValid = typeof result === 'object' ? result.valid : !!result;
       console.log(`[2FA Debug] Résultat: ${isValid}`);
 
       if (!isValid) return false;
@@ -95,11 +96,12 @@ export class TwoFactorService {
     if (!user || !user.twoFactorSecret) return false;
 
     try {
-      return verifySync({
+      const result = verifySync({
         token: code,
         secret: user.twoFactorSecret,
-        window: 4
+        window: 1
       });
+      return typeof result === 'object' ? result.valid : !!result;
     } catch {
       return false;
     }
