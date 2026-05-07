@@ -90,6 +90,7 @@ model Client {
   updatedAt DateTime     @updatedAt
   deletedAt DateTime?    // Pour le soft delete
   mandats   Mandat[]
+  quotes    Quote[]
 }
 
 model Mandat {
@@ -108,6 +109,7 @@ model Mandat {
   enqueteur   User?        @relation("EnqueteurMandats", fields: [enqueteurId], references: [id])
   subcontractors MandatSubcontractor[]
   timeEntries    TimeEntry[]
+  quotes         Quote[]
 }
 
 model Dossier {
@@ -227,4 +229,81 @@ enum ActivityType {
   NOTE
   ASSIGNMENT
   MANDAT_CREATED
+}
+
+model Service {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  unitPrice    Float    // Prix unitaire HT (Client)
+  internalCost Float    @default(0) // Coût interne (ex: ce qu'on paie au détective)
+  unit         ServiceUnit @default(HOUR)
+  category     ServiceCategory @default(SURVEILLANCE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  quoteItems   QuoteItem[]
+}
+
+enum ServiceUnit {
+  HOUR
+  DAY
+  FIXED
+  KM
+}
+
+enum ServiceCategory {
+  DIGITAL_INVESTIGATION
+  SURVEILLANCE
+  REPORT
+  LOGISTICS
+  ADMIN
+  OTHER
+}
+
+// ─── Devis (Quotes) ─────────────────────────────────────
+
+model Quote {
+  id          String      @id @default(uuid())
+  reference   String      @unique // Ex: DD-2026-0001
+  mandatId    String
+  clientId    String
+  status      QuoteStatus @default(DRAFT)
+  totalHT     Float       @default(0)
+  totalTTC    Float       @default(0)
+  taxRate     Float       @default(7.7) // TVA suisse par défaut
+  marginRate  Float?      // Marge calculée automatiquement
+  pdfPath     String?     // Chemin du PDF généré (stockage)
+  sentAt      DateTime?   // Date d'envoi au client
+  expiresAt   DateTime?   // Date d'expiration du devis
+  notes       String?     // Notes libres / CGV
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  mandat      Mandat      @relation(fields: [mandatId], references: [id])
+  client      Client      @relation(fields: [clientId], references: [id])
+  items       QuoteItem[]
+}
+
+model QuoteItem {
+  id          String  @id @default(uuid())
+  quoteId     String
+  serviceId   String?
+  label       String  // Libellé (copié depuis Service ou libre)
+  description String?
+  quantity    Float
+  unitPrice   Float   // Prix snapshot au moment du devis
+  discount    Float   @default(0) // Remise en %
+  totalHT     Float   // quantity * unitPrice * (1 - discount/100)
+
+  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  service     Service? @relation(fields: [serviceId], references: [id])
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REFUSED
+  EXPIRED
 }

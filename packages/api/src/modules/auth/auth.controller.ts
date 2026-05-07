@@ -2,10 +2,19 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { AuthRequest } from '../../shared/middlewares/authenticate';
 import { TwoFactorService } from './two-factor.service';
+import { WPService } from '../wp/wp.service';
 
 export class AuthController {
   static async register(req: Request, res: Response) {
     const user = await AuthService.register(req.body);
+
+    // Synchronisation WordPress en arrière-plan (sans bloquer la réponse)
+    WPService.syncRegisteredUserToWP({
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    }).catch(err => console.error('[WP Sync] Erreur lors de l\'inscription :', err));
+
     res.status(201).json(user);
   }
 

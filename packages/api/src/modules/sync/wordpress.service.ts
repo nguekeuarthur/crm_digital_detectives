@@ -4,57 +4,79 @@ import { AuditService } from '../audit/audit.service';
 
 export class WordpressService {
   /**
-   * Importation manuelle/globale depuis l'API REST de WordPress
+   * Importation manuelle/globale depuis WordPress via WP Webhooks
    */
   static async syncClients(adminId: string) {
-    const { WP_URL, WP_USERNAME, WP_APP_PASSWORD } = process.env;
+    const url = process.env.WP_WEBHOOK_URL;
 
-    if (!WP_URL || !WP_USERNAME || !WP_APP_PASSWORD) {
-      throw new Error('La configuration WordPress est incomplète dans le .env');
+    if (!url) {
+      throw new Error('WP_WEBHOOK_URL non configuré dans le .env');
     }
 
     try {
-      // Appel à l'API WordPress (Endpoints natifs)
-      const auth = Buffer.from(`${WP_USERNAME}:${WP_APP_PASSWORD}`).toString('base64');
-      const response = await axios.get(`${WP_URL}/wp-json/wp/v2/users`, {
-        headers: { Authorization: `Basic ${auth}` },
-        params: { context: 'edit', per_page: 100 }
+      const params = new URLSearchParams({
+        action: 'get_users',
+        arguments: JSON.stringify({ number: 1000 })
       });
 
-      const wpUsers = response.data;
+      const response = await axios.post(url, params.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+
+      if (!response.data || !response.data.success) {
+        throw new Error('Échec de la récupération des utilisateurs via WP Webhooks');
+      }
+
+      // La réponse de WP Webhooks a une structure spéciale pour get_users
+      // res.data.data contient un tableau d'objets, où chaque objet a une propriété "data"
+      let wpUsers: any[] = [];
+      const responseData = response.data.data;
+      
+      if (Array.isArray(responseData)) {
+        wpUsers = responseData;
+      }
+
       let created = 0;
       let updated = 0;
 
-      for (const wpUser of wpUsers) {
-        // Logique de conflit : email existant ou wpId existant
+      for (const item of wpUsers) {
+        // Les infos de l'utilisateur sont nichées dans la propriété "data"
+        const wpUser = item.data;
+        if (!wpUser) continue;
+
+        const email = wpUser.user_email || wpUser.email;
+        if (!email) continue;
+
+        const wpId = wpUser.ID?.toString() || wpUser.id?.toString();
+        const firstName = wpUser.first_name || wpUser.display_name?.split(' ')[0] || 'Inconnu';
+        const lastName = wpUser.last_name || wpUser.display_name?.split(' ').slice(1).join(' ') || 'Inconnu';
+
         const existingClient = await prisma.client.findFirst({
           where: {
             OR: [
-              { email: wpUser.email },
-              { wpId: wpUser.id.toString() }
+              { email: email },
+              { wpId: wpId }
             ]
           }
         });
 
         if (existingClient) {
-          // Mise à jour
           await prisma.client.update({
             where: { id: existingClient.id },
             data: {
-              firstName: wpUser.first_name || existingClient.firstName,
-              lastName: wpUser.last_name || existingClient.lastName,
-              wpId: wpUser.id.toString()
+              firstName: existingClient.firstName === 'Inconnu' ? firstName : undefined,
+              lastName: existingClient.lastName === 'Inconnu' ? lastName : undefined,
+              wpId: wpId
             }
           });
           updated++;
         } else {
-          // Création
           await prisma.client.create({
             data: {
-              email: wpUser.email,
-              firstName: wpUser.first_name || 'Inconnu',
-              lastName: wpUser.last_name || 'Inconnu',
-              wpId: wpUser.id.toString(),
+              email: email,
+              firstName: firstName,
+              lastName: lastName,
+              wpId: wpId,
               status: 'PROSPECT'
             }
           });
@@ -72,7 +94,7 @@ export class WordpressService {
       return { created, updated, totalFetched: wpUsers.length };
     } catch (error: any) {
       console.error('Erreur de synchronisation WP:', error.message);
-      throw new Error('Erreur de communication avec WordPress');
+      throw new Error('Erreur de communication avec WordPress Webhooks');
     }
   }
 

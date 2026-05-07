@@ -19,6 +19,8 @@ import { subcontractorRoutes } from './modules/subcontractor/subcontractor.route
 import { timeEntryRoutes } from './modules/time-entry/time-entry.routes';
 import { billingRoutes } from './modules/billing/billing.routes';
 import { syncRouter, webhookRouter } from './modules/sync/sync.routes';
+import { catalogRouter } from './modules/catalog/catalog.routes';
+import { quoteRouter } from './modules/quote/quote.routes';
 import { initCronJobs } from './shared/cron';
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
@@ -90,6 +92,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // ─── Routes publiques (pas besoin de token) ───
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/webhooks', webhookRouter); // Webhooks WP → CRM (publiques, sécurisées par secret)
 
 // ─── Middleware d'authentification global ───
 // Toutes les routes déclarées APRÈS cette ligne sont protégées
@@ -105,7 +108,9 @@ app.use('/api/v1/subcontractors', subcontractorRoutes);
 app.use('/api/v1/time-entries', timeEntryRoutes);
 app.use('/api/v1/billing', billingRoutes);
 app.use('/api/v1/sync', syncRouter);
-app.use('/api/v1/webhooks', webhookRouter);
+// webhookRouter est monté AVANT authenticate (voir ligne 95)
+app.use('/api/v1/catalog', catalogRouter);
+app.use('/api/v1/quotes', quoteRouter);
 
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

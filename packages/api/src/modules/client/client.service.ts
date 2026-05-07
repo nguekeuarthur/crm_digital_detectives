@@ -3,6 +3,7 @@ import { AuditService } from '../audit/audit.service';
 import { ClientStatus, Prisma } from '@prisma/client';
 import { ValidationError } from '../../shared/errors';
 import { z } from 'zod';
+import { WPService } from '../wp/wp.service';
 
 export const ClientSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -49,6 +50,11 @@ export class ClientService {
       entity: 'Client',
       entityId: client.id,
       newValue: client
+    });
+
+    // 6. Synchronisation WordPress (en arrière-plan)
+    WPService.syncUserToWP(client).catch(err => {
+      console.error('Erreur non attrapée lors de la synchro WP', err);
     });
 
     return client;
