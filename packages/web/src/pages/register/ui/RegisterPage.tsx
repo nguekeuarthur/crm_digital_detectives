@@ -160,7 +160,7 @@ export function RegisterPage() {
               <Stack gap="xl">
                 {error && <Alert color="red" variant="filled" radius="md">{error}</Alert>}
                 
-                <Group grow={!isMobile} gap="md" style={{ flexDirection: isMobile ? 'column' : 'row' }}>
+                <Group grow gap="sm">
                   <TextInput 
                     label={<Text c="gray.4" size="xs" fw={700} mb={5} tt="uppercase">Prénom</Text>}
                     placeholder="Jean" 
