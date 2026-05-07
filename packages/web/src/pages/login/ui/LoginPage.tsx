@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useMediaQuery } from '@mantine/hooks';
 import { 
   TextInput, 
   PasswordInput, 
@@ -30,6 +31,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [require2FA, setRequire2FA] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const isMobile = useMediaQuery('(max-width: 768px)') ?? false;
 
   const navigate = useNavigate();
   const token = useAuthStore((state) => state.accessToken);
@@ -133,14 +135,14 @@ export function LoginPage() {
       {/* Panneau gauche : Formulaire */}
       <Box 
         style={{ 
-          flex: '0 0 500px', 
+          flex: isMobile ? '1 1 100%' : '0 0 500px', 
           display: 'flex', 
           flexDirection: 'column',
           justifyContent: 'center',
-          padding: '3rem',
+          padding: isMobile ? '2rem 1.5rem' : '3rem',
           background: 'rgba(10, 9, 0, 0.85)',
           backdropFilter: 'blur(20px)',
-          borderRight: `1px solid ${GOLD_BORDER}`,
+          borderRight: isMobile ? 'none' : `1px solid ${GOLD_BORDER}`,
           zIndex: 10,
         }}
       >
@@ -153,7 +155,7 @@ export function LoginPage() {
               </Box>
             </Group>
             
-            <Title order={2} c="white" fw={800} style={{ fontSize: '2.2rem', lineHeight: 1.1 }}>
+            <Title order={2} c="white" fw={800} style={{ fontSize: isMobile ? '1.7rem' : '2.2rem', lineHeight: 1.1 }}>
               Content de vous revoir.
             </Title>
             <Text c="gray.5" size="lg" mt={10}>
@@ -299,9 +301,9 @@ export function LoginPage() {
                       background: 'rgba(171, 142, 61, 0.05)',
                       border: `2px solid ${GOLD_BORDER}`,
                       color: 'white',
-                      fontSize: '1.5rem',
-                      height: '65px',
-                      width: '50px',
+                      fontSize: isMobile ? '1.2rem' : '1.5rem',
+                      height: isMobile ? '52px' : '65px',
+                      width: isMobile ? '38px' : '50px',
                       '&:focus': { borderColor: GOLD }
                     }
                   }}

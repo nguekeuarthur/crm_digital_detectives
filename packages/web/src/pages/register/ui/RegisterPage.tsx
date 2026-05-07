@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useMediaQuery } from '@mantine/hooks';
 import { 
   TextInput, 
   PasswordInput, 
@@ -30,6 +31,7 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const isMobile = useMediaQuery('(max-width: 768px)') ?? false;
 
   const navigate = useNavigate();
   const token = useAuthStore((state) => state.accessToken);
@@ -124,7 +126,7 @@ export function RegisterPage() {
       <Container size={500} style={{ zIndex: 10 }}>
         <Paper 
           radius="xl" 
-          p={50} 
+          p={isMobile ? 24 : 50} 
           style={{ 
             background: 'rgba(15, 23, 42, 0.8)',
             backdropFilter: 'blur(20px)',
@@ -158,7 +160,7 @@ export function RegisterPage() {
               <Stack gap="xl">
                 {error && <Alert color="red" variant="filled" radius="md">{error}</Alert>}
                 
-                <Group grow gap="md">
+                <Group grow={!isMobile} gap="md" style={{ flexDirection: isMobile ? 'column' : 'row' }}>
                   <TextInput 
                     label={<Text c="gray.4" size="xs" fw={700} mb={5} tt="uppercase">Prénom</Text>}
                     placeholder="Jean" 
