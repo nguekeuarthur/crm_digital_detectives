@@ -1,5 +1,8 @@
 # CRM DigitalDetectives
 
+[![CI](https://github.com/nguekeuarthur/crm_digital_detectives/actions/workflows/ci.yml/badge.svg)](https://github.com/nguekeuarthur/crm_digital_detectives/actions/workflows/ci.yml)
+[![Deploy](https://github.com/nguekeuarthur/crm_digital_detectives/actions/workflows/deploy.yml/badge.svg)](https://github.com/nguekeuarthur/crm_digital_detectives/actions/workflows/deploy.yml)
+
 ## Contexte
 
 Ce repository initialise le projet CRM DigitalDetectives en architecture monorepo.
