@@ -1,35 +1,81 @@
 import { create } from 'zustand';
-import { api } from '../../../shared/api/base';
+import axios from 'axios';
+import { getAccessToken, setAccessToken } from '../../../shared/api/token';
+
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
 
 interface AuthState {
-  user: any | null;
+  user: User | null;
   accessToken: string | null;
   require2FA: boolean;
   tempUserId: string | null;
+  isRestoringSession: boolean;
   setTokens: (accessToken: string, refreshToken: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   setRequire2FA: (userId: string) => void;
+  restoreSession: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  accessToken: localStorage.getItem('accessToken'),
+  // accessToken est en mémoire uniquement — jamais dans localStorage
+  accessToken: getAccessToken(),
   require2FA: false,
   tempUserId: null,
+  isRestoringSession: false,
 
   setTokens: (accessToken, refreshToken) => {
-    localStorage.setItem('accessToken', accessToken);
+    setAccessToken(accessToken);
+    // refreshToken persiste pour restaurer la session après rechargement
     localStorage.setItem('refreshToken', refreshToken);
     set({ accessToken, require2FA: false, tempUserId: null });
   },
 
-  logout: () => {
-    localStorage.removeItem('accessToken');
+  logout: async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      try {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'}/auth/logout`,
+          { refreshToken }
+        );
+      } catch {
+        // On ignore les erreurs de déconnexion côté serveur
+      }
+    }
+    setAccessToken(null);
     localStorage.removeItem('refreshToken');
     set({ user: null, accessToken: null, require2FA: false, tempUserId: null });
   },
 
   setRequire2FA: (userId) => {
     set({ require2FA: true, tempUserId: userId });
-  }
+  },
+
+  restoreSession: async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) return;
+
+    set({ isRestoringSession: true });
+    try {
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'}/auth/refresh`,
+        { refreshToken }
+      );
+      setAccessToken(data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      set({ accessToken: data.accessToken });
+    } catch {
+      // Refresh token invalide ou expiré — on nettoie
+      localStorage.removeItem('refreshToken');
+    } finally {
+      set({ isRestoringSession: false });
+    }
+  },
 }));

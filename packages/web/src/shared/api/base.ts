@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccessToken, setAccessToken } from './token';
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1',
@@ -7,9 +8,9 @@ export const api = axios.create({
   },
 });
 
-// Intercepteur pour ajouter le token JWT
+// Intercepteur pour ajouter le token JWT depuis la mémoire (jamais depuis localStorage)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -40,17 +41,14 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si c'est un 401 et qu'on n'a pas déjà tenté un retry
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Ne pas tenter de refresh sur les routes d'auth elles-mêmes
-      if (originalRequest.url?.includes('/auth/login') || 
+      if (originalRequest.url?.includes('/auth/login') ||
           originalRequest.url?.includes('/auth/refresh') ||
           originalRequest.url?.includes('/auth/register')) {
         return Promise.reject(error);
       }
 
       if (isRefreshing) {
-        // Si un refresh est déjà en cours, on met la requête en file d'attente
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         }).then((token) => {
@@ -65,9 +63,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refreshToken');
 
       if (!refreshToken) {
-        // Pas de refresh token → déconnexion
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        setAccessToken(null);
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
@@ -80,7 +76,7 @@ api.interceptors.response.use(
           { refreshToken }
         );
 
-        localStorage.setItem('accessToken', data.accessToken);
+        setAccessToken(data.accessToken);
         localStorage.setItem('refreshToken', data.refreshToken);
 
         api.defaults.headers.common.Authorization = `Bearer ${data.accessToken}`;
@@ -90,8 +86,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Refresh échoué → déconnexion
-        localStorage.removeItem('accessToken');
+        setAccessToken(null);
         localStorage.removeItem('refreshToken');
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
