@@ -15,6 +15,8 @@ import {
   Center
 } from '@mantine/core';
 import { IconLock, IconMail, IconShieldCheck } from '@tabler/icons-react';
+
+const GOLD = '#AB8E3D';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../../shared/api/base';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
@@ -86,7 +88,7 @@ export function RegisterPage() {
           position: 'absolute', 
           width: '600px', 
           height: '600px', 
-          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(171, 142, 61, 0.15) 0%, transparent 70%)',
           left: mousePos.x - 300,
           top: mousePos.y - 300,
           pointerEvents: 'none',
@@ -101,7 +103,7 @@ export function RegisterPage() {
           position: 'absolute', 
           width: '600px', 
           height: '600px', 
-          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(171, 142, 61, 0.15) 0%, transparent 70%)',
           top: '-10%',
           right: '-5%',
           zIndex: 0
@@ -112,7 +114,7 @@ export function RegisterPage() {
           position: 'absolute', 
           width: '400px', 
           height: '400px', 
-          background: 'radial-gradient(circle, rgba(79, 70, 229, 0.1) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(138, 112, 48, 0.1) 0%, transparent 70%)',
           bottom: '5%',
           left: '2%',
           zIndex: 0
@@ -132,20 +134,7 @@ export function RegisterPage() {
         >
           <Box mb={40} ta="center">
             <Center mb={20}>
-              <Box 
-                style={{ 
-                  width: 50, 
-                  height: 50, 
-                  background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', 
-                  borderRadius: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 8px 16px rgba(79, 70, 229, 0.4)'
-                }}
-              >
-                <IconShieldCheck size={30} color="white" />
-              </Box>
+              <img src="/logo-dore.png" alt="Digital Detectives" height={60} />
             </Center>
             <Title fw={900} order={2} c="white" style={{ fontSize: '2rem', letterSpacing: '-1px' }}>
               Nouvel Agent
@@ -206,7 +195,7 @@ export function RegisterPage() {
                   label={<Text c="gray.4" size="xs" fw={700} mb={5} tt="uppercase">Email Agent</Text>}
                   placeholder="agent.smith@digital-detectives.fr" 
                   required 
-                  leftSection={<IconMail size={16} color="#6366f1" />}
+                  leftSection={<IconMail size={16} color={GOLD} />}
                   styles={{
                     input: {
                       background: 'rgba(255, 255, 255, 0.03)',
@@ -223,7 +212,7 @@ export function RegisterPage() {
                   label={<Text c="gray.4" size="xs" fw={700} mb={5} tt="uppercase">Mot de passe</Text>}
                   placeholder="••••••••••••" 
                   required 
-                  leftSection={<IconLock size={16} color="#6366f1" />}
+                  leftSection={<IconLock size={16} color={GOLD} />}
                   styles={{
                     input: {
                       background: 'rgba(255, 255, 255, 0.03)',
@@ -231,7 +220,7 @@ export function RegisterPage() {
                       color: 'white',
                       height: '50px'
                     },
-                    visibilityToggle: { color: '#6366f1' }
+                    visibilityToggle: { color: GOLD }
                   }}
                   value={password}
                   onChange={(e) => setPassword(e.currentTarget.value)}
@@ -243,7 +232,7 @@ export function RegisterPage() {
                   size="lg"
                   mt={10}
                   loading={loading}
-                  style={{ height: '56px', boxShadow: '0 10px 20px rgba(99, 102, 241, 0.2)' }}
+                  style={{ height: '56px', background: `linear-gradient(135deg, ${GOLD} 0%, #8a7030 100%)`, color: '#000', boxShadow: `0 10px 20px rgba(171, 142, 61, 0.3)` }}
                 >
                   Finaliser l{"'"}enrôlement
                 </Button>
