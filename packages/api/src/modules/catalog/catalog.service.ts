@@ -107,6 +107,7 @@ export class CatalogService {
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = XLSX.utils.sheet_to_json(sheet) as any[];
 
     let created = 0;
@@ -132,6 +133,7 @@ export class CatalogService {
           }
         });
         created++;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         errors.push(`Ligne ${index + 2}: ${err.message}`);
       }

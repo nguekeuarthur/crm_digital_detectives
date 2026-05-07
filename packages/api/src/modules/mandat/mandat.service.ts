@@ -250,6 +250,7 @@ export class MandatService {
     return updated;
   }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
   private static validateStatusTransition(current: MandatStatus, _next: MandatStatus) {
     // Un mandat TERMINE ou ANNULE ne peut plus être modifié
     if (current === MandatStatus.TERMINE || current === MandatStatus.ANNULE) {

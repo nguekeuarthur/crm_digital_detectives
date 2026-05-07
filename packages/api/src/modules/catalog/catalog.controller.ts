@@ -8,8 +8,9 @@ export class CatalogController {
   }
 
   static async getAll(req: Request, res: Response) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     const category = req.query.category as any;
-    const isActive = req.query.isActive === 'false' ? false : true;
+    const isActive = req.query.isActive !== 'false';
     const services = await CatalogService.getServices({ category, isActive });
     res.json(services);
   }

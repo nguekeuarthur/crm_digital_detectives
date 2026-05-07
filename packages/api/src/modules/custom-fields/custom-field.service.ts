@@ -58,15 +58,15 @@ export class CustomFieldService {
         where: {
           fieldDefinitionId_entityId: {
             fieldDefinitionId: definitionId,
-            entityId: entityId
+            entityId
           }
         },
         update: { value },
         create: {
           fieldDefinitionId: definitionId,
-          entityId: entityId,
-          entityType: entityType,
-          value: value
+          entityId,
+          entityType,
+          value
         }
       });
     });
@@ -77,7 +77,7 @@ export class CustomFieldService {
       userId,
       action: 'UPDATE_CUSTOM_FIELDS',
       entity: entityType === CustomFieldEntity.MANDATE ? 'Mandat' : 'Client',
-      entityId: entityId,
+      entityId,
       newValue: values
     });
 

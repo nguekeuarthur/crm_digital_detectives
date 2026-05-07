@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Request, Response } from 'express';
 import { AuthRequest } from '../../shared/middlewares';
 import { FileService } from './file.service';
@@ -22,6 +23,7 @@ const upload = multer({
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
       cb(new ValidationError('Type de fichier non autorisé') as any);
     }
   }

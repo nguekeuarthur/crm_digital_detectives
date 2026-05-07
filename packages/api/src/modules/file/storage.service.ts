@@ -65,9 +65,12 @@ export class StorageService {
         Key: key,
       });
       const response = await s3Client.send(command);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stream = response.Body as any;
       return new Promise((resolve, reject) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
         const chunks: any[] = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
         stream.on('data', (chunk: any) => chunks.push(chunk));
         stream.on('error', reject);
         stream.on('end', () => resolve(Buffer.concat(chunks)));

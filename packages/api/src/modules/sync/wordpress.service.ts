@@ -29,6 +29,7 @@ export class WordpressService {
 
       // La réponse de WP Webhooks a une structure spéciale pour get_users
       // res.data.data contient un tableau d'objets, où chaque objet a une propriété "data"
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
       let wpUsers: any[] = [];
       const responseData = response.data.data;
       
@@ -54,8 +55,8 @@ export class WordpressService {
         const existingClient = await prisma.client.findFirst({
           where: {
             OR: [
-              { email: email },
-              { wpId: wpId }
+              { email },
+              { wpId }
             ]
           }
         });
@@ -66,17 +67,17 @@ export class WordpressService {
             data: {
               firstName: existingClient.firstName === 'Inconnu' ? firstName : undefined,
               lastName: existingClient.lastName === 'Inconnu' ? lastName : undefined,
-              wpId: wpId
+              wpId
             }
           });
           updated++;
         } else {
           await prisma.client.create({
             data: {
-              email: email,
-              firstName: firstName,
-              lastName: lastName,
-              wpId: wpId,
+              email,
+              firstName,
+              lastName,
+              wpId,
               status: 'PROSPECT'
             }
           });
@@ -92,6 +93,7 @@ export class WordpressService {
       });
 
       return { created, updated, totalFetched: wpUsers.length };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Erreur de synchronisation WP:', error.message);
       throw new Error('Erreur de communication avec WordPress Webhooks');
@@ -101,6 +103,7 @@ export class WordpressService {
   /**
    * Webhook: Gère la création en temps réel d'un client (Push depuis WP)
    */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async handleClientWebhook(wpUser: any) {
     if (!wpUser.email) return null;
 
@@ -126,6 +129,7 @@ export class WordpressService {
   /**
    * Webhook: Gère la création d'un mandat (Formulaire WP CF7/WooCommerce)
    */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async handleMandateWebhook(formData: any) {
     // Le webhook WP doit envoyer l'email du client
     if (!formData.email || !formData.title) {

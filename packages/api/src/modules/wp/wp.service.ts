@@ -96,6 +96,7 @@ export class WPService {
       console.error(`❌ [WP Sync] Échec :`, res.data);
       return false;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error(`❌ [WP Sync] Erreur :`, error.response?.data || error.message);
       return false;

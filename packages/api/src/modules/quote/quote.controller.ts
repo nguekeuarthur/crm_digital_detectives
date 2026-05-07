@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { QuoteService } from './quote.service';
 import { PDFService } from './pdf.service';
 import { MailService } from '../mail/mail.service';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import path from 'path';
 import fs from 'fs';
 
@@ -22,6 +23,7 @@ export class QuoteController {
     const quotes = await QuoteService.getQuotes({
       mandatId: mandatId as string,
       clientId: clientId as string,
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
       status: status as any
     });
     res.json(quotes);

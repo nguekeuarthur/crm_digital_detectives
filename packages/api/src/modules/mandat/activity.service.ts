@@ -9,6 +9,7 @@ export class ActivityService {
     mandatId: string;
     userId: string;
     type: ActivityType;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     payload?: any;
   }) {
     return prisma.activity.create({

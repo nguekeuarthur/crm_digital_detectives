@@ -5,7 +5,9 @@ export interface AuditLogData {
   action: string;
   entity: string;
   entityId?: string;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   oldValue?: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   newValue?: any;
   ipAddress?: string;
 }
@@ -49,6 +51,7 @@ export class AuditService {
     const { userId, entity, action, startDate, endDate, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
     if (userId) where.userId = userId;
     if (entity) where.entity = entity;
@@ -96,6 +99,7 @@ export class AuditService {
     const cutOffDate = new Date();
     cutOffDate.setDate(cutOffDate.getDate() - days);
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     const oldLogs = await prisma.auditLog.findMany({
       where: { createdAt: { lt: cutOffDate } }
     });

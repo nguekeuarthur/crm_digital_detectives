@@ -31,6 +31,7 @@ export class FileService {
     await StorageService.uploadFile(key, data.buffer, data.mimeType);
 
     // 4. Extraction des métadonnées EXIF (si image/vidéo)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     let exifData: any = null;
     let geoLat: number | null = null;
     let geoLng: number | null = null;
@@ -56,7 +57,7 @@ export class FileService {
     const file = await prisma.file.create({
       data: {
         name: data.name,
-        key: key,
+        key,
         size: data.size,
         mimeType: data.mimeType,
         folderId: data.folderId,

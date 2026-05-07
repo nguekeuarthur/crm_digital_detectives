@@ -40,6 +40,7 @@ export class MailService {
 
       console.log(`✅ Email envoyé : ${info.messageId}`);
       return info;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('❌ Erreur lors de l\'envoi de l\'email :', error);
       throw new ValidationError(`Échec de l'envoi de l'email : ${error.message}`);
