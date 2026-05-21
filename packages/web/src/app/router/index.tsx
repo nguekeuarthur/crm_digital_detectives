@@ -4,6 +4,9 @@ import { Box, Center, Image } from '@mantine/core';
 import { LoginPage } from '../../pages/login/ui/LoginPage';
 import { RegisterPage } from '../../pages/register/ui/RegisterPage';
 import { DashboardPage } from '../../pages/dashboard/ui/DashboardPage';
+import { ClientsPage } from '../../pages/clients/ui/ClientsPage';
+import { PlanningPage } from '../../pages/planning/ui/PlanningPage';
+import { SubcontractorsPage } from '../../pages/subcontractors/ui/SubcontractorsPage';
 import { TwoFactorPage } from '../../pages/settings/2fa/ui/TwoFactorPage';
 import { AppLayout } from '../../widgets/layout/ui/AppLayout';
 import { useAuthStore } from '../../features/auth/model/auth.store';
@@ -53,6 +56,18 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <ProtectedRoute><DashboardPage /></ProtectedRoute>,
+  },
+  {
+    path: '/clients',
+    element: <ProtectedRoute><ClientsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/planning',
+    element: <ProtectedRoute><PlanningPage /></ProtectedRoute>,
+  },
+  {
+    path: '/subcontractors',
+    element: <ProtectedRoute><SubcontractorsPage /></ProtectedRoute>,
   },
   {
     path: '/settings/2fa',

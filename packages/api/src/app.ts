@@ -21,6 +21,7 @@ import { billingRoutes } from './modules/billing/billing.routes';
 import { syncRouter, webhookRouter } from './modules/sync/sync.routes';
 import { catalogRouter } from './modules/catalog/catalog.routes';
 import { quoteRouter } from './modules/quote/quote.routes';
+import statisticsRouter from './modules/statistics/statistics.routes';
 import { initCronJobs } from './shared/cron';
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
@@ -111,6 +112,7 @@ app.use('/api/v1/sync', syncRouter);
 // webhookRouter est monté AVANT authenticate (voir ligne 95)
 app.use('/api/v1/catalog', catalogRouter);
 app.use('/api/v1/quotes', quoteRouter);
+app.use('/api/v1/statistics', statisticsRouter);
 
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
