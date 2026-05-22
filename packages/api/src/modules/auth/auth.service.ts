@@ -164,7 +164,7 @@ export class AuthService {
     );
 
     const refreshToken = jwt.sign(
-      { userId, role },
+      { userId, role, jti: uuidv4() },
       REFRESH_SECRET,
       { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
     );
