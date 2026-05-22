@@ -21,7 +21,7 @@ export const authorizeMandat = async (req: AuthRequest, res: Response, next: Nex
     return next();
   }
 
-  const mandatId = req.params.mandatId || req.params.id;
+  const mandatId = (req.params.mandatId || req.params.id) as string;
 
   if (!mandatId) {
     return next(); // Pas de mandat spécifique demandé, on laisse passer

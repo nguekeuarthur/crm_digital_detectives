@@ -16,11 +16,11 @@ import {
   Center
 } from '@mantine/core';
 import { IconLock, IconMail, IconShieldCheck } from '@tabler/icons-react';
-
-const GOLD = '#AB8E3D';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../../shared/api/base';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
+
+const GOLD = '#AB8E3D';
 
 export function RegisterPage() {
   const [email, setEmail] = useState('');

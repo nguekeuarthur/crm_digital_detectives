@@ -45,7 +45,7 @@ export class AuthController {
 
   static async disable2FA(req: AuthRequest, res: Response) {
     // Note: On pourrait restreindre à l'admin si besoin
-    await TwoFactorService.disable(req.params.userId || req.user!.userId, req.user!.userId);
+    await TwoFactorService.disable((req.params.userId as string) || req.user!.userId, req.user!.userId);
     res.json({ message: '2FA désactivée' });
   }
 

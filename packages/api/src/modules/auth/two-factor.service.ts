@@ -41,7 +41,7 @@ export class TwoFactorService {
       const result = verifySync({
         token: code,
         secret: user.twoFactorSecret,
-        window: 1
+        epochTolerance: 30
       });
 
       const isValid = typeof result === 'object' ? result.valid : !!result;
@@ -99,7 +99,7 @@ export class TwoFactorService {
       const result = verifySync({
         token: code,
         secret: user.twoFactorSecret,
-        window: 1
+        epochTolerance: 30
       });
       return typeof result === 'object' ? result.valid : !!result;
     } catch {

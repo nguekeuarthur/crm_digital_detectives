@@ -17,7 +17,7 @@ export class CustomFieldController {
   }
 
   static async deleteDefinition(req: AuthRequest, res: Response) {
-    await CustomFieldService.deleteDefinition(req.params.id, req.user!.userId);
+    await CustomFieldService.deleteDefinition(req.params.id as string, req.user!.userId);
     res.status(204).send();
   }
 
@@ -29,7 +29,7 @@ export class CustomFieldController {
   }
 
   static async getValues(req: AuthRequest, res: Response) {
-    const values = await CustomFieldService.getValues(req.params.entityId);
+    const values = await CustomFieldService.getValues(req.params.entityId as string);
     res.json(values);
   }
 }

@@ -5,7 +5,7 @@ import { BillingService } from './billing.service';
 export class BillingController {
   static async getSummary(req: AuthRequest, res: Response) {
     const summary = await BillingService.computeSubcontractorInvoice(
-      req.params.subcontractorId,
+      req.params.subcontractorId as string,
       req.query.mandatId as string
     );
     res.json(summary);
@@ -13,7 +13,7 @@ export class BillingController {
 
   static async downloadPDF(req: AuthRequest, res: Response) {
     const pdfBuffer = await BillingService.generateInvoicePDF(
-      req.params.subcontractorId,
+      req.params.subcontractorId as string,
       req.query.mandatId as string
     );
 
