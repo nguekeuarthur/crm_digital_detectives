@@ -7,6 +7,8 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import cookieParser from 'cookie-parser';
+import { csrfProtection, xssSanitizer } from './shared/middlewares';
 
 import { authenticate } from './shared/middlewares/authenticate';
 import { authRoutes } from './modules/auth/auth.routes';
@@ -21,6 +23,9 @@ import { billingRoutes } from './modules/billing/billing.routes';
 import { syncRouter, webhookRouter } from './modules/sync/sync.routes';
 import { catalogRouter } from './modules/catalog/catalog.routes';
 import { quoteRouter } from './modules/quote/quote.routes';
+import { adminRoutes } from './modules/admin/admin.routes';
+import { retentionRoutes } from './modules/retention/retention.routes';
+import { ExportController } from './modules/export/export.controller';
 import { initCronJobs } from './shared/cron';
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
@@ -63,10 +68,42 @@ const swaggerOptions = {
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
+// Redirection HTTPS en production
+if (process.env.NODE_ENV === 'production') {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(`https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
+
 // Middlewares de sécurité et utilitaires
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
 app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
+app.use(xssSanitizer);
+app.use(csrfProtection);
 app.use(morgan('dev'));
 
 // Rate Limiting
@@ -93,12 +130,15 @@ app.get('/health', (_req: Request, res: Response) => {
 // ─── Routes publiques (pas besoin de token) ───
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/webhooks', webhookRouter); // Webhooks WP → CRM (publiques, sécurisées par secret)
+app.get('/api/v1/files/download-export/:id', ExportController.downloadExport);
 
 // ─── Middleware d'authentification global ───
 // Toutes les routes déclarées APRÈS cette ligne sont protégées
 app.use('/api/v1', authenticate);
 
 // ─── Routes protégées (nécessitent un token valide) ───
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/admin', retentionRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/mandates', mandatRoutes);
 app.use('/api/v1/clients', clientRoutes);
@@ -122,7 +162,7 @@ app.use((err: Error & { status?: number; code?: string; details?: unknown }, _re
       error: {
         message: 'Erreur de validation des données',
         code: 'VALIDATION_ERROR',
-        details: err.errors.map(e => ({ path: e.path, message: e.message }))
+        details: err.issues.map((e) => ({ path: e.path, message: e.message }))
       }
     });
   }
