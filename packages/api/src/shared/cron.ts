@@ -29,4 +29,19 @@ export const initCronJobs = () => {
       console.error('❌ [CRON] Erreur lors de la révocation des accès:', error);
     }
   });
+
+  // 3. Purge de rétention et notifications J-7 (Tous les jours à minuit)
+  cron.schedule('0 0 * * *', async () => {
+    console.log('🔒 [CRON] Exécution de la politique de rétention des données...');
+    try {
+      const { RetentionService } = await import('../modules/retention/retention.service');
+      const { ExportService } = await import('../modules/export/export.service');
+      const warningsSent = await RetentionService.sendWarnings();
+      const purgeResult = await RetentionService.runPurge();
+      await ExportService.cleanupExports();
+      console.log(`✅ [CRON] Rétention traitée : ${warningsSent} alertes envoyées, purge :`, purgeResult, 'et exports expirés nettoyés');
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors du traitement de la rétention et nettoyage des exports:', error);
+    }
+  });
 };
