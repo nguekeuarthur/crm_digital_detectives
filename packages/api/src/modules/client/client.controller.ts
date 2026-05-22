@@ -23,22 +23,22 @@ export class ClientController {
   }
 
   static async getById(req: AuthRequest, res: Response) {
-    const client = await ClientService.getClientById(req.params.id);
+    const client = await ClientService.getClientById(req.params.id as string);
     res.json(client);
   }
 
   static async update(req: AuthRequest, res: Response) {
-    const client = await ClientService.updateClient(req.params.id, req.body, req.user!.userId);
+    const client = await ClientService.updateClient(req.params.id as string, req.body, req.user!.userId);
     res.json(client);
   }
 
   static async delete(req: AuthRequest, res: Response) {
-    await ClientService.deleteClient(req.params.id, req.user!.userId);
+    await ClientService.deleteClient(req.params.id as string, req.user!.userId);
     res.status(204).send();
   }
 
   static async getMandates(req: AuthRequest, res: Response) {
-    const mandates = await ClientService.getClientMandates(req.params.id);
+    const mandates = await ClientService.getClientMandates(req.params.id as string);
     res.json(mandates);
   }
 }

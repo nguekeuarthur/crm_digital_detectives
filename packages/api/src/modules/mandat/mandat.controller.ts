@@ -31,12 +31,12 @@ export class MandatController {
   }
 
   static async getById(req: AuthRequest, res: Response) {
-    const mandat = await MandatService.getMandatById(req.params.id);
+    const mandat = await MandatService.getMandatById(req.params.id as string);
     res.json(mandat);
   }
 
   static async update(req: AuthRequest, res: Response) {
-    const mandat = await MandatService.updateMandat(req.params.id, {
+    const mandat = await MandatService.updateMandat(req.params.id as string, {
       ...req.body,
       userId: req.user!.userId
     });
@@ -44,24 +44,24 @@ export class MandatController {
   }
 
   static async delete(req: AuthRequest, res: Response) {
-    await MandatService.deleteMandat(req.params.id, req.user!.userId);
+    await MandatService.deleteMandat(req.params.id as string, req.user!.userId);
     res.status(204).send();
   }
 
   static async assign(req: AuthRequest, res: Response) {
     const { enqueteurId } = req.body;
-    const mandat = await MandatService.assignUser(req.params.id, enqueteurId, req.user!.userId);
+    const mandat = await MandatService.assignUser(req.params.id as string, enqueteurId, req.user!.userId);
     res.json(mandat);
   }
 
   static async unassign(req: AuthRequest, res: Response) {
-    const mandat = await MandatService.unassignUser(req.params.id, req.user!.userId);
+    const mandat = await MandatService.unassignUser(req.params.id as string, req.user!.userId);
     res.json(mandat);
   }
 
   static async getActivity(req: AuthRequest, res: Response) {
     const { type, userId, startDate, endDate, page, limit } = req.query;
-    const activities = await ActivityService.getMandatActivity(req.params.id, {
+    const activities = await ActivityService.getMandatActivity(req.params.id as string, {
       type: type as ActivityType,
       userId: userId as string,
       startDate: startDate ? new Date(startDate as string) : undefined,
@@ -73,14 +73,14 @@ export class MandatController {
   }
 
   static async getGeoFiles(req: AuthRequest, res: Response) {
-    const files = await MandatService.getGeoLocatedFiles(req.params.id);
+    const files = await MandatService.getGeoLocatedFiles(req.params.id as string);
     res.json(files);
   }
 
   static async createFolder(req: AuthRequest, res: Response) {
     const folder = await DossierService.createDossier({
       name: req.body.name,
-      mandatId: req.params.id,
+      mandatId: req.params.id as string,
       parentId: req.body.parentId,
       userId: req.user!.userId
     });
@@ -88,18 +88,18 @@ export class MandatController {
   }
 
   static async renameFolder(req: AuthRequest, res: Response) {
-    const folder = await DossierService.renameDossier(req.params.folderId, req.body.name, req.user!.userId);
+    const folder = await DossierService.renameDossier(req.params.folderId as string, req.body.name, req.user!.userId);
     res.json(folder);
   }
 
   static async deleteFolder(req: AuthRequest, res: Response) {
-    await DossierService.deleteDossier(req.params.folderId, req.user!.userId);
+    await DossierService.deleteDossier(req.params.folderId as string, req.user!.userId);
     res.status(204).send();
   }
 
   static async assignSubcontractor(req: AuthRequest, res: Response) {
     const assignment = await MandatService.assignSubcontractorToMandat({
-      mandatId: req.params.id,
+      mandatId: req.params.id as string,
       subcontractorId: req.body.subcontractorId,
       hourlyRate: req.body.hourlyRate,
       startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
@@ -109,7 +109,7 @@ export class MandatController {
   }
 
   static async getTimeEntries(req: AuthRequest, res: Response) {
-    const entries = await TimeEntryService.getSummaryForMandat(req.params.id);
+    const entries = await TimeEntryService.getSummaryForMandat(req.params.id as string);
     res.json(entries);
   }
 }
