@@ -16,18 +16,22 @@ function sanitizeString(str: string): string {
  * Nettoie récursivement un objet contenant des chaînes de caractères
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function sanitizeObject(obj: any): any {
+function sanitizeObject(obj: any, parentKey?: string): any {
   if (typeof obj === 'string') {
+    const sensitiveKeys = ['password', 'passwordConfirm', 'refreshToken', 'token', 'code', 'accessToken'];
+    if (parentKey && sensitiveKeys.includes(parentKey)) {
+      return obj;
+    }
     return sanitizeString(obj);
   }
   if (Array.isArray(obj)) {
-    return obj.map(sanitizeObject);
+    return obj.map((item) => sanitizeObject(item, parentKey));
   }
   if (obj !== null && typeof obj === 'object') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sanitized: any = {};
     for (const key of Object.keys(obj)) {
-      sanitized[key] = sanitizeObject(obj[key]);
+      sanitized[key] = sanitizeObject(obj[key], key);
     }
     return sanitized;
   }
