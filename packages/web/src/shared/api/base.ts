@@ -1,14 +1,63 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 import { getAccessToken, setAccessToken } from './token';
 
+// Helper pour lire les cookies
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+}
+
+// Instance publique pour l'authentification (sans intercepteurs de token/refresh)
+export const publicApi = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
+// Instance principale pour les requêtes authentifiées
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
-// Intercepteur pour ajouter le token JWT depuis la mémoire (jamais depuis localStorage)
+// Intercepteur CSRF partagé (Double Submit Cookie)
+const csrfRequestInterceptor = async (config: InternalAxiosRequestConfig) => {
+  const safeMethods = ['get', 'head', 'options', 'trace'];
+  if (config.method && !safeMethods.includes(config.method.toLowerCase())) {
+    let csrfToken = getCookie('csrfToken');
+    
+    // Si absent, on récupère le token via un GET rapide
+    if (!csrfToken) {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'}/auth/csrf-token`,
+          { withCredentials: true }
+        );
+        csrfToken = response.data.csrfToken;
+      } catch (err) {
+        console.error('Échec de la récupération du jeton CSRF:', err);
+      }
+    }
+    
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+  return config;
+};
+
+// Enregistrement de l'intercepteur CSRF sur les deux instances
+api.interceptors.request.use(csrfRequestInterceptor);
+publicApi.interceptors.request.use(csrfRequestInterceptor);
+
+// Intercepteur pour ajouter le token JWT sur l'instance principale
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) {
@@ -71,10 +120,7 @@ api.interceptors.response.use(
       }
 
       try {
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'}/auth/refresh`,
-          { refreshToken }
-        );
+        const { data } = await publicApi.post('/auth/refresh', { refreshToken });
 
         setAccessToken(data.accessToken);
         localStorage.setItem('refreshToken', data.refreshToken);

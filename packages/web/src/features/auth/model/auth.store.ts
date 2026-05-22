@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import { publicApi } from '../../../shared/api/base';
 import { getAccessToken, setAccessToken } from '../../../shared/api/token';
 
 interface User {
@@ -41,10 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
       try {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'}/auth/logout`,
-          { refreshToken }
-        );
+        await publicApi.post('/auth/logout', { refreshToken });
       } catch {
         // On ignore les erreurs de déconnexion côté serveur
       }
@@ -64,10 +61,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     set({ isRestoringSession: true });
     try {
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'}/auth/refresh`,
-        { refreshToken }
-      );
+      const { data } = await publicApi.post('/auth/refresh', { refreshToken });
       setAccessToken(data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
       set({ accessToken: data.accessToken });
