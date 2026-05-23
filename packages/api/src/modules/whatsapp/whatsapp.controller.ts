@@ -110,9 +110,10 @@ export class WhatsappController {
 
           // Déterminer le dossier cible en fonction du type MIME
           let folderName = 'Correspondances';
-          if (mimeType.startsWith('image/')) {
+          const safeMimeType = mimeType || 'application/octet-stream';
+          if (safeMimeType.startsWith('image/')) {
             folderName = 'Preuves Photographiques';
-          } else if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) {
+          } else if (safeMimeType.startsWith('video/') || safeMimeType.startsWith('audio/')) {
             folderName = 'Vidéos et Audios';
           }
 
@@ -132,14 +133,14 @@ export class WhatsappController {
           }
 
           // Générer un nom de fichier unique et expressif
-          const ext = mimeType.split('/')[1]?.split(';')[0] || 'bin';
+          const ext = safeMimeType.split('/')[1]?.split(';')[0] || 'bin';
           const filename = `whatsapp_${MessageSid || Date.now()}_${i}.${ext}`;
 
           // Uploader le fichier
           const savedFile = await FileService.uploadFile({
             name: filename,
             buffer,
-            mimeType,
+            mimeType: safeMimeType,
             size: buffer.length,
             folderId: folder.id,
             userId: actingUserId
