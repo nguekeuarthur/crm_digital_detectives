@@ -44,4 +44,15 @@ export const initCronJobs = () => {
       console.error('❌ [CRON] Erreur lors du traitement de la rétention et nettoyage des exports:', error);
     }
   });
+
+  // 4. Synchronisation automatique des e-mails IMAP (Toutes les 2 minutes)
+  cron.schedule('*/2 * * * *', async () => {
+    console.log('📬 [CRON] Synchronisation automatique des e-mails (IMAP)...');
+    try {
+      const { MailSyncService } = await import('../modules/mail/mail-sync.service');
+      await MailSyncService.syncEmails();
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors de la synchronisation automatique des e-mails :', error);
+    }
+  });
 };

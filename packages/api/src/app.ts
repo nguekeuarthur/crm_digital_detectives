@@ -27,6 +27,7 @@ import { adminRoutes } from './modules/admin/admin.routes';
 import { retentionRoutes } from './modules/retention/retention.routes';
 import { ExportController } from './modules/export/export.controller';
 import { initCronJobs } from './shared/cron';
+import { mailRoutes } from './modules/mail/mail.routes';
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
 // app.use('/api/v1/mandats', mandatRoutes);
@@ -154,6 +155,7 @@ app.use('/api/v1/sync', syncRouter);
 // webhookRouter est monté AVANT authenticate (voir ligne 95)
 app.use('/api/v1/catalog', catalogRouter);
 app.use('/api/v1/quotes', quoteRouter);
+app.use('/api/v1/mail', mailRoutes);
 
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
