@@ -38,8 +38,12 @@ export class WhatsappController {
       
       const isValid = WhatsappService.validateSignature(authToken, signature, absoluteUrl, req.body);
       if (!isValid) {
-        console.error('❌ [Twilio Webhook] Signature invalide.');
-        return res.status(403).send('Signature invalide');
+        console.error(`❌ [Twilio Webhook] Signature invalide. (URL reconstruite: ${absoluteUrl})`);
+        if (process.env.NODE_ENV === 'production') {
+          return res.status(403).send('Signature invalide');
+        } else {
+          console.warn('⚠️ [Twilio Webhook] Signature invalide acceptée en mode développement (tunnel).');
+        }
       }
     }
 
@@ -83,7 +87,7 @@ export class WhatsappController {
       return res.status(200).send('Aucun mandat actif pour ce client');
     }
 
-    const actingUserId = await this.getActingUserId(activeMandat);
+    const actingUserId = await WhatsappController.getActingUserId(activeMandat);
     const mediaCount = parseInt(String(NumMedia));
     const mediaInfoList: Array<{ name: string; key: string; size: number; mimeType: string }> = [];
 
