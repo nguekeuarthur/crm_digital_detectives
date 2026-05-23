@@ -91,6 +91,7 @@ model Client {
   deletedAt DateTime?    // Pour le soft delete
   mandats   Mandat[]
   quotes    Quote[]
+  emails    Email[]
 }
 
 model Mandat {
@@ -111,6 +112,7 @@ model Mandat {
   timeEntries    TimeEntry[]
   quotes         Quote[]
   retentionDays  Int          @default(30)
+  emails         Email[]
 }
 
 model Dossier {
@@ -319,4 +321,21 @@ model DataRetentionPolicy {
   updatedAt     DateTime @updatedAt
 
   @@unique([entityType, triggerEvent])
+}
+
+model Email {
+  id          String   @id @default(uuid())
+  messageId   String   @unique
+  from        String
+  to          String
+  subject     String
+  body        String   // Corps HTML ou texte de l'e-mail
+  createdAt   DateTime @default(now())
+  receivedAt  DateTime // Date d'envoi/réception réelle de l'e-mail
+  
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  mandatId    String?
+  mandat      Mandat?  @relation(fields: [mandatId], references: [id], onDelete: SetNull)
 }
