@@ -45,8 +45,8 @@ export const initCronJobs = () => {
     }
   });
 
-  // 4. Synchronisation automatique des e-mails IMAP (Toutes les 2 minutes)
-  cron.schedule('*/2 * * * *', async () => {
+  // 4. Synchronisation automatique des e-mails IMAP (Toutes les 5 minutes)
+  cron.schedule('*/5 * * * *', async () => {
     console.log('📬 [CRON] Synchronisation automatique des e-mails (IMAP)...');
     try {
       const { MailSyncService } = await import('../modules/mail/mail-sync.service');
