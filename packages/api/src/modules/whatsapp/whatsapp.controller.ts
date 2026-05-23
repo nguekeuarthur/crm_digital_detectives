@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import fs from 'fs';
 import { AuthRequest } from '../../shared/middlewares';
 import { prisma } from '../../shared/prisma';
 import { WhatsappService } from './whatsapp.service';
@@ -154,6 +155,13 @@ export class WhatsappController {
           });
         } catch (mediaErr) {
           console.error(`❌ [WhatsApp Webhook] Erreur lors du traitement du média ${i} :`, mediaErr);
+          try {
+            const err = mediaErr as Record<string, unknown>;
+            const cause = err?.cause as Record<string, unknown> | undefined;
+            const causeStr = cause ? `\nCause: ${cause.stack || cause.message || JSON.stringify(cause)}` : '';
+            const errStack = mediaErr instanceof Error ? `${mediaErr.stack}${causeStr}` : String(mediaErr);
+            fs.appendFileSync('error.log', `[${new Date().toISOString()}] Média ${i} Erreur: ${errStack}\n`);
+          } catch {}
         }
       }
     }
