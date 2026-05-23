@@ -330,12 +330,20 @@ model Email {
   to          String
   subject     String
   body        String   // Corps HTML ou texte de l'e-mail
+  direction   String   @default("INBOUND") // INBOUND = reçu, OUTBOUND = envoyé
   createdAt   DateTime @default(now())
   receivedAt  DateTime // Date d'envoi/réception réelle de l'e-mail
-  
+
+  // Threading / Fil de conversation (RFC 2822)
+  threadId    String?  // ID du fil (= messageId du premier email du thread)
+  inReplyTo   String?  // Message-ID de l'email auquel on répond
+  references  String?  // Liste des Message-IDs de la chaîne de réponses
+
   clientId    String?
   client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  
+
   mandatId    String?
   mandat      Mandat?  @relation(fields: [mandatId], references: [id], onDelete: SetNull)
+
+  @@index([threadId])
 }
