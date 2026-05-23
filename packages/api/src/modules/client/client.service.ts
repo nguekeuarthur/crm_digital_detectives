@@ -166,4 +166,21 @@ export class ClientService {
       orderBy: { createdAt: 'desc' }
     });
   }
+
+  static async getClientActivity(id: string) {
+    const mandates = await prisma.mandat.findMany({
+      where: { clientId: id, deletedAt: null },
+      select: { id: true }
+    });
+    
+    if (!mandates.length) return [];
+
+    const mandatIds = mandates.map(m => m.id);
+
+    return prisma.activity.findMany({
+      where: { mandatId: { in: mandatIds } },
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { firstName: true, lastName: true } } }
+    });
+  }
 }

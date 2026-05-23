@@ -41,4 +41,9 @@ export class ClientController {
     const mandates = await ClientService.getClientMandates(req.params.id as string);
     res.json(mandates);
   }
+
+  static async getActivity(req: AuthRequest, res: Response) {
+    const activity = await ClientService.getClientActivity(req.params.id as string);
+    res.json(activity);
+  }
 }

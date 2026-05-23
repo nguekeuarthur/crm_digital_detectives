@@ -17,7 +17,8 @@ const upload = multer({
       'application/pdf',
       'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'video/mp4', 'video/quicktime', 'video/x-msvideo'
+      'video/mp4', 'video/quicktime', 'video/x-msvideo',
+      'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4'
     ];
     
     if (allowedMimeTypes.includes(file.mimetype)) {
@@ -61,7 +62,7 @@ export class FileController {
     const file = await FileService.getById(req.params.id as string);
     
     res.setHeader('Content-Type', file.mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
     res.send(buffer);
   }
 

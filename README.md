@@ -70,3 +70,44 @@ npm run dev
 ├─ package.json
 └─ README.md
 ```
+
+## Mise en Production : Twilio (WhatsApp) & Ringover (Téléphonie)
+
+Pour que l'intégration fonctionne en production, le client final (Digitaldetectives) doit créer ses propres comptes professionnels et vous transmettre les informations de configuration suivantes à insérer dans le fichier `.env` du backend en production :
+
+### 1. Twilio (WhatsApp Business API)
+
+- **Création du compte** : Le client doit créer un compte sur [Twilio](https://www.twilio.com) et faire valider son numéro de téléphone professionnel pour WhatsApp Business.
+- **Identifiants à fournir** :
+  - `TWILIO_ACCOUNT_SID` : L'identifiant unique de son compte Twilio.
+  - `TWILIO_AUTH_TOKEN` : Le jeton d'authentification secret de son compte.
+  - `TWILIO_WHATSAPP_NUMBER` : Le numéro de téléphone WhatsApp validé par Twilio au format `whatsapp:+[indicatif][numéro]` (ex: `whatsapp:+41779975877`).
+- **Configuration du Webhook Twilio** : Dans la console Twilio (Sandbox ou numéro WhatsApp de production), configurer l'URL de réception des messages (webhook) sur :
+  - `https://<domaine-du-crm>/api/v1/webhooks/whatsapp`
+
+### 2. Ringover (CTI & Appels)
+
+- **Création du compte** : Le client doit posséder un compte entreprise sur [Ringover](https://www.ringover.com) avec accès aux options développeurs.
+- **Configuration du Webhook Ringover** : Dans le panneau de configuration Ringover, ajouter un webhook pointant vers :
+  - `https://<domaine-du-crm>/api/v1/webhooks/ringover`
+  - Sélectionner les événements : Début d'appel (`call_started` ou `call.started`), Fin d'appel (`call_ended` ou `call.ended`), et Appel manqué (`call_missed` ou `call.missed`).
+- **Identifiant à fournir** :
+  - `RINGOVER_WEBHOOK_SECRET` : Le token d'authentification généré par Ringover pour sécuriser le webhook (à configurer dans le fichier `.env` de production pour rejeter les requêtes non authentifiées).
+
+### 3. Simulation et Tests de Téléphonie (Local)
+
+Pour tester l'intégration Ringover et WhatsApp en local sans envoyer de vrais événements, un script de simulation est inclus :
+
+```bash
+# Simuler un appel entrant (Déclenche le pop-up CTI sur l'interface Web)
+npx tsx packages/api/test-ringover.ts --event=call_started --from="+33612345678" --to="+41779975877"
+
+# Simuler la fin de cet appel avec un enregistrement audio (Sauvegarde et met à jour le fil d'activité)
+npx tsx packages/api/test-ringover.ts --event=call_ended --status=answered --duration=120 --recording="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" --from="+33612345678" --to="+41779975877"
+```
+
+Les appels simulés seront historisés dans le dossier système `Correspondances` lié aux mandats du client identifié par le numéro `from`.
+
+> [!NOTE]
+> **Synchronisation Automatique WordPress**
+> Lorsque vous simulez un appel entrant d'un numéro inconnu, la pop-up CTI vous propose de "Créer le client". En validant ce formulaire, le compte du client est non seulement créé dans le CRM, mais il est également **synchronisé automatiquement sur WordPress** en arrière-plan (sans action manuelle requise). L'enregistrement audio (fichier MP3/WAV) et l'historique d'activité restent quant à eux stockés **uniquement sur le CRM**.

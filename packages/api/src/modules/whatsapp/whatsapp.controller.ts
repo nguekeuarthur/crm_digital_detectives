@@ -172,7 +172,7 @@ export class WhatsappController {
             name: filename,
             key: savedFile.key,
             size: buffer.length,
-            mimeType
+            mimeType: safeMimeType
           });
         } catch (mediaErr) {
           console.error(`❌ [WhatsApp Webhook] Erreur lors du traitement du média ${i} :`, mediaErr);

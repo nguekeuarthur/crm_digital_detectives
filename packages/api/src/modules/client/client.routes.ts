@@ -217,6 +217,25 @@ router.get('/:id/mandates', authorize('ADMIN', 'ENQUETEUR'), ClientController.ge
 
 /**
  * @openapi
+ * /clients/{id}/activity:
+ *   get:
+ *     summary: Fil d'activité d'un client (tous ses mandats)
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Liste des activités
+ */
+router.get('/:id/activity', authorize('ADMIN', 'ENQUETEUR'), ClientController.getActivity);
+
+/**
+ * @openapi
  * /clients/{id}/export:
  *   post:
  *     summary: Exporter toutes les données d'un client (format ZIP asynchrone)
