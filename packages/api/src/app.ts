@@ -28,6 +28,7 @@ import { retentionRoutes } from './modules/retention/retention.routes';
 import { ExportController } from './modules/export/export.controller';
 import { initCronJobs } from './shared/cron';
 import { mailRoutes } from './modules/mail/mail.routes';
+import { whatsappPublicRoutes, whatsappProtectedRoutes } from './modules/whatsapp/whatsapp.routes';
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
 // app.use('/api/v1/mandats', mandatRoutes);
@@ -106,6 +107,7 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(xssSanitizer);
 app.use(csrfProtection);
 app.use(morgan('dev'));
@@ -134,6 +136,7 @@ app.get('/health', (_req: Request, res: Response) => {
 // ─── Routes publiques (pas besoin de token) ───
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/webhooks', webhookRouter); // Webhooks WP → CRM (publiques, sécurisées par secret)
+app.use('/api/v1/webhooks', whatsappPublicRoutes); // Webhook WhatsApp Twilio (public, pas de secret WP)
 app.get('/api/v1/files/download-export/:id', ExportController.downloadExport);
 
 // ─── Middleware d'authentification global ───
@@ -156,6 +159,7 @@ app.use('/api/v1/sync', syncRouter);
 app.use('/api/v1/catalog', catalogRouter);
 app.use('/api/v1/quotes', quoteRouter);
 app.use('/api/v1/mail', mailRoutes);
+app.use('/api/v1/whatsapp', whatsappProtectedRoutes);
 
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
