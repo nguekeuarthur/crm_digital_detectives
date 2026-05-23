@@ -47,11 +47,11 @@ export class WhatsappController {
       }
     }
 
-    const { From, To, Body, MessageSid, NumMedia = '0' } = req.body;
+    const { From, To, Body = '', MessageSid, NumMedia = '0' } = req.body;
 
-    if (!From || !Body) {
-      console.warn('⚠️ [Twilio Webhook] Requête reçue sans expéditeur ou sans corps.');
-      return res.status(400).send('Champs From et Body requis');
+    if (!From) {
+      console.warn('⚠️ [Twilio Webhook] Requête reçue sans expéditeur.');
+      return res.status(400).send('Champ From requis');
     }
 
     console.log(`💬 [WhatsApp] Message reçu de ${From} (SID: ${MessageSid}) : "${Body}"`);
