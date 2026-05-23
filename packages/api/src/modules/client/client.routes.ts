@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ClientController } from './client.controller';
-import { authorize } from '../../shared/middlewares';
+import { authorize, AuthRequest } from '../../shared/middlewares';
 
 const router = Router();
 
@@ -234,6 +234,40 @@ router.get('/:id/mandates', authorize('ADMIN', 'ENQUETEUR'), ClientController.ge
  */
 router.post('/:id/export', authorize('ADMIN', 'ENQUETEUR'), (req, res, next) => {
   import('../export/export.controller').then(m => m.ExportController.exportClient(req, res)).catch(next);
+});
+
+/**
+ * @openapi
+ * /clients/{id}/emails:
+ *   get:
+ *     summary: Liste des emails associés à un client (triée chronologiquement)
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: ID du client
+ *       - in: query
+ *         name: grouped
+ *         schema: { type: string, enum: ['true', 'false'] }
+ *         description: Si "true", regroupe les emails par fil de conversation (threadId)
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200:
+ *         description: Liste chronologique des emails du client (entrants et sortants)
+ *       404:
+ *         description: Client non trouvé
+ */
+router.get('/:id/emails', authorize('ADMIN', 'ENQUETEUR'), (req, res, next) => {
+  import('../mail/mail.controller').then(m => m.MailController.getClientEmails(req as AuthRequest, res)).catch(next);
 });
 
 export { router as clientRoutes };
