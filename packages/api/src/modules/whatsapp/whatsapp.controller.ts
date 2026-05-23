@@ -1,10 +1,21 @@
 import { Request, Response } from 'express';
-import fs from 'fs';
 import { AuthRequest } from '../../shared/middlewares';
 import { prisma } from '../../shared/prisma';
 import { WhatsappService } from './whatsapp.service';
 import { FileService } from '../file/file.service';
 import { ActivityService } from '../mandat/activity.service';
+
+function decodeHtmlEntities(str: string): string {
+  if (!str) return str;
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x2F;/g, '/')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)));
+}
 
 export class WhatsappController {
   /**
@@ -94,14 +105,24 @@ export class WhatsappController {
 
     // 4. Téléchargement et classement des pièces jointes
     for (let i = 0; i < mediaCount; i++) {
-      const mediaUrl = req.body[`MediaUrl${i}`];
-      const mimeType = req.body[`MediaContentType${i}`];
+      const rawMediaUrl = req.body[`MediaUrl${i}`];
+      const mediaUrl = rawMediaUrl ? decodeHtmlEntities(rawMediaUrl) : undefined;
+      const rawMimeType = req.body[`MediaContentType${i}`];
+      const mimeType = rawMimeType ? decodeHtmlEntities(rawMimeType) : undefined;
       
       if (mediaUrl) {
         try {
           console.log(`📥 [WhatsApp Webhook] Téléchargement du média ${i} (${mimeType}) depuis ${mediaUrl}...`);
           
-          const response = await fetch(mediaUrl);
+          const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID || '';
+          const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN || '';
+          const encodedCreds = Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString('base64');
+
+          const response = await fetch(mediaUrl, {
+            headers: {
+              'Authorization': `Basic ${encodedCreds}`
+            }
+          });
           if (!response.ok) {
             throw new Error(`Échec du téléchargement (HTTP ${response.status})`);
           }
@@ -155,13 +176,6 @@ export class WhatsappController {
           });
         } catch (mediaErr) {
           console.error(`❌ [WhatsApp Webhook] Erreur lors du traitement du média ${i} :`, mediaErr);
-          try {
-            const err = mediaErr as Record<string, unknown>;
-            const cause = err?.cause as Record<string, unknown> | undefined;
-            const causeStr = cause ? `\nCause: ${cause.stack || cause.message || JSON.stringify(cause)}` : '';
-            const errStack = mediaErr instanceof Error ? `${mediaErr.stack}${causeStr}` : String(mediaErr);
-            fs.appendFileSync('error.log', `[${new Date().toISOString()}] Média ${i} Erreur: ${errStack}\n`);
-          } catch {}
         }
       }
     }
