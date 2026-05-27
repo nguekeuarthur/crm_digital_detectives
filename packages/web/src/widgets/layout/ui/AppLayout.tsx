@@ -16,9 +16,23 @@ import {
   Box,
   Tabs
 } from '@mantine/core';
-import { IconPhoneCall, IconUserPlus, IconEye, IconX, IconBriefcase, IconMail, IconPhone, IconActivity, IconFolder } from '@tabler/icons-react';
+import { IconPhoneCall, IconUserPlus, IconEye, IconX, IconBriefcase, IconMail, IconPhone, IconActivity, IconFolder, IconMapPin } from '@tabler/icons-react';
 import { api } from '../../../shared/api/base';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
 
 // Couleurs premium Gold & Dark du thème Digitaldetectives
 const GOLD = '#AB8E3D';
@@ -53,6 +67,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [clientActivities, setClientActivities] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>('mandats');
+
+  // États Modal de visualisation de carte des preuves
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedMandateForMap, setSelectedMandateForMap] = useState<any | null>(null);
 
   // États Modal de création rapide client
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -402,6 +420,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           <Table.Th>Intitulé du mandat</Table.Th>
                           <Table.Th>Statut</Table.Th>
                           <Table.Th>Date de création</Table.Th>
+                          <Table.Th style={{ width: '130px' }}>Actions</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -421,6 +440,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                               <Text size="xs">
                                 {new Date(mandat.createdAt).toLocaleDateString('fr-FR')}
                               </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Button
+                                size="xs"
+                                variant="light"
+                                color="brand"
+                                leftSection={<IconMapPin size={14} />}
+                                onClick={() => setSelectedMandateForMap(mandat)}
+                              >
+                                Carte
+                              </Button>
                             </Table.Td>
                           </Table.Tr>
                         ))}
@@ -562,6 +592,151 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </Stack>
         </form>
       </Modal>
+
+      {/* ========================================== */}
+      {/* MODAL : VISUALISATION DE LA CARTE DES PREUVES */}
+      {/* ========================================== */}
+      <Modal
+        opened={!!selectedMandateForMap}
+        onClose={() => setSelectedMandateForMap(null)}
+        title={
+          <Group gap="xs">
+            <IconMapPin color={GOLD} size={22} />
+            <Text fw={700} size="lg">Carte des Preuves - {selectedMandateForMap?.title}</Text>
+          </Group>
+        }
+        size="lg"
+        radius="md"
+        styles={{
+          header: { borderBottom: `1px solid ${GOLD_BORDER}`, paddingBottom: '10px' },
+          content: { border: `1px solid ${GOLD_BORDER}` }
+        }}
+      >
+        {selectedMandateForMap && (
+          <MandateMap mandatId={selectedMandateForMap.id} token={token} />
+        )}
+      </Modal>
     </AppShell>
+  );
+}
+
+interface MandateMapProps {
+  mandatId: string;
+  token: string | null;
+}
+
+function MandateMap({ mandatId, token }: MandateMapProps) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [geoFiles, setGeoFiles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    api.get(`/mandates/${mandatId}/geo-files`)
+      .then(res => {
+        setGeoFiles(res.data);
+      })
+      .catch(err => {
+        console.error('Error fetching geo files:', err);
+        setError('Impossible de récupérer les preuves géolocalisées');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [mandatId]);
+
+  useEffect(() => {
+    if (loading || error || !mapContainerRef.current || geoFiles.length === 0) return;
+
+    // S'assurer qu'il n'y a pas déjà une carte initialisée
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+    }
+
+    // Coordonnées de départ : Suisse par défaut
+    const map = L.map(mapContainerRef.current).setView([46.8182, 8.2275], 8);
+    mapInstanceRef.current = map;
+
+    // Dark layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      maxZoom: 20
+    }).addTo(map);
+
+    const markerGroup = L.featureGroup();
+
+    geoFiles.forEach(file => {
+      if (file.geoLat !== null && file.geoLng !== null) {
+        const isImage = file.name.match(/\.(jpg|jpeg|png|heic|heif)$/i);
+        const isVideo = file.name.match(/\.(mp4|mov|webm)$/i);
+        // Base API URL
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+        const fileUrl = `${apiUrl}/files/stream/${file.id}?token=${token}`;
+
+        let previewHtml = '';
+        if (isImage) {
+          previewHtml = `<img src="${fileUrl}" style="max-width: 100%; max-height: 120px; border-radius: 4px; margin-top: 8px; display: block; object-fit: cover;" />`;
+        } else if (isVideo) {
+          previewHtml = `<video src="${fileUrl}" controls style="max-width: 100%; max-height: 120px; border-radius: 4px; margin-top: 8px; display: block;"></video>`;
+        }
+
+        const popupContent = `
+          <div style="font-family: sans-serif; color: #111; min-width: 180px; font-size: 12px; line-height: 1.4;">
+            <strong style="display: block; font-size: 13px; margin-bottom: 4px; word-break: break-all;">${file.name}</strong>
+            <span style="color: #666; font-size: 10px;">Date : ${new Date(file.createdAt).toLocaleString('fr-FR')}</span>
+            ${previewHtml}
+            <div style="margin-top: 6px; font-size: 10px; color: #888;">GPS : ${file.geoLat.toFixed(5)}, ${file.geoLng.toFixed(5)}</div>
+          </div>
+        `;
+
+        const marker = L.marker([file.geoLat, file.geoLng])
+          .bindPopup(popupContent);
+        
+        marker.addTo(map);
+        markerGroup.addLayer(marker);
+      }
+    });
+
+    if (markerGroup.getLayers().length > 0) {
+      map.fitBounds(markerGroup.getBounds(), { padding: [40, 40] });
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [loading, error, geoFiles, token]);
+
+  if (loading) {
+    return (
+      <Stack align="center" justify="center" py="xl">
+        <Loader color="brand" size="md" />
+        <Text size="sm" c="dimmed">Chargement de la carte et des fichiers...</Text>
+      </Stack>
+    );
+  }
+
+  if (error) {
+    return <Alert color="red">{error}</Alert>;
+  }
+
+  if (geoFiles.length === 0) {
+    return (
+      <Alert color="blue" title="Aucune preuve géolocalisée">
+        Ce mandat ne contient aucun fichier photo ou vidéo avec des coordonnées GPS valides.
+      </Alert>
+    );
+  }
+
+  return (
+    <Box style={{ border: `1px solid ${GOLD_BORDER}`, borderRadius: '8px', overflow: 'hidden' }}>
+      <div ref={mapContainerRef} style={{ height: '450px', width: '100%' }} />
+    </Box>
   );
 }
