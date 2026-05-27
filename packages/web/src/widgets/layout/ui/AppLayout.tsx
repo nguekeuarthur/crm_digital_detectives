@@ -14,9 +14,25 @@ import {
   Loader,
   Alert,
   Box,
-  Tabs
+  Tabs,
+  Grid
 } from '@mantine/core';
-import { IconPhoneCall, IconUserPlus, IconEye, IconX, IconBriefcase, IconMail, IconPhone, IconActivity, IconFolder, IconMapPin } from '@tabler/icons-react';
+import { 
+  IconPhoneCall, 
+  IconUserPlus, 
+  IconEye, 
+  IconX, 
+  IconBriefcase, 
+  IconMail, 
+  IconPhone, 
+  IconActivity, 
+  IconFolder, 
+  IconMapPin,
+  IconChevronLeft,
+  IconChevronRight,
+  IconCopy,
+  IconCheck
+} from '@tabler/icons-react';
 import { api } from '../../../shared/api/base';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
 import L from 'leaflet';
@@ -52,6 +68,18 @@ interface IncomingCallData {
   } | null;
 }
 
+interface GeoFile {
+  id: string;
+  name: string;
+  size: number;
+  geoLat: number;
+  geoLng: number;
+  folderId: string;
+  exifData: Record<string, any> | null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  userId: string | null;
+  createdAt: string;
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.accessToken);
   const wsRef = useRef<WebSocket | null>(null);
@@ -71,6 +99,44 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // États Modal de visualisation de carte des preuves
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedMandateForMap, setSelectedMandateForMap] = useState<any | null>(null);
+  const [geoFiles, setGeoFiles] = useState<GeoFile[]>([]);
+  const [loadingGeoFiles, setLoadingGeoFiles] = useState(false);
+  const [errorGeoFiles, setErrorGeoFiles] = useState<string | null>(null);
+  const [selectedFileForViewer, setSelectedFileForViewer] = useState<GeoFile | null>(null);
+
+  useEffect(() => {
+    if (!selectedMandateForMap) {
+      setGeoFiles([]);
+      return;
+    }
+    setLoadingGeoFiles(true);
+    setErrorGeoFiles(null);
+    api.get(`/mandates/${selectedMandateForMap.id}/geo-files`)
+      .then(res => {
+        setGeoFiles(res.data);
+      })
+      .catch(err => {
+        console.error('Error fetching geo files:', err);
+        setErrorGeoFiles('Impossible de récupérer les preuves géolocalisées');
+      })
+      .finally(() => {
+        setLoadingGeoFiles(false);
+      });
+  }, [selectedMandateForMap]);
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).openEvidenceViewer = (fileId: string) => {
+      const file = geoFiles.find(f => f.id === fileId);
+      if (file) {
+        setSelectedFileForViewer(file);
+      }
+    };
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (window as any).openEvidenceViewer;
+    };
+  }, [geoFiles]);
 
   // États Modal de création rapide client
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -613,7 +679,41 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         }}
       >
         {selectedMandateForMap && (
-          <MandateMap mandatId={selectedMandateForMap.id} token={token} />
+          <MandateMap 
+            token={token} 
+            geoFiles={geoFiles}
+            loading={loadingGeoFiles}
+            error={errorGeoFiles}
+          />
+        )}
+      </Modal>
+
+      {/* ========================================== */}
+      {/* MODAL : VISIONNEUSE DE PREUVE INDIVIDUELLE */}
+      {/* ========================================== */}
+      <Modal
+        opened={!!selectedFileForViewer}
+        onClose={() => setSelectedFileForViewer(null)}
+        title={
+          <Group gap="xs">
+            <IconEye color={GOLD} size={22} />
+            <Text fw={700} size="lg">Visionneuse de Preuve</Text>
+          </Group>
+        }
+        size="xl"
+        radius="md"
+        styles={{
+          header: { borderBottom: `1px solid ${GOLD_BORDER}`, paddingBottom: '10px' },
+          content: { border: `1px solid ${GOLD_BORDER}` }
+        }}
+      >
+        {selectedFileForViewer && (
+          <EvidenceViewerContent
+            file={selectedFileForViewer}
+            geoFiles={geoFiles}
+            token={token}
+            onSelectFile={setSelectedFileForViewer}
+          />
         )}
       </Modal>
     </AppShell>
@@ -621,33 +721,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 interface MandateMapProps {
-  mandatId: string;
   token: string | null;
+  geoFiles: GeoFile[];
+  loading: boolean;
+  error: string | null;
 }
 
-function MandateMap({ mandatId, token }: MandateMapProps) {
+function MandateMap({ token, geoFiles, loading, error }: MandateMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [geoFiles, setGeoFiles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    api.get(`/mandates/${mandatId}/geo-files`)
-      .then(res => {
-        setGeoFiles(res.data);
-      })
-      .catch(err => {
-        console.error('Error fetching geo files:', err);
-        setError('Impossible de récupérer les preuves géolocalisées');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [mandatId]);
 
   useEffect(() => {
     if (loading || error || !mapContainerRef.current || geoFiles.length === 0) return;
@@ -690,6 +772,7 @@ function MandateMap({ mandatId, token }: MandateMapProps) {
             <span style="color: #666; font-size: 10px;">Date : ${new Date(file.createdAt).toLocaleString('fr-FR')}</span>
             ${previewHtml}
             <div style="margin-top: 6px; font-size: 10px; color: #888;">GPS : ${file.geoLat.toFixed(5)}, ${file.geoLng.toFixed(5)}</div>
+            <button onclick="window.openEvidenceViewer('${file.id}')" style="margin-top: 8px; width: 100%; padding: 6px; background-color: #AB8E3D; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-align: center;">Ouvrir la visionneuse</button>
           </div>
         `;
 
@@ -738,5 +821,305 @@ function MandateMap({ mandatId, token }: MandateMapProps) {
     <Box style={{ border: `1px solid ${GOLD_BORDER}`, borderRadius: '8px', overflow: 'hidden' }}>
       <div ref={mapContainerRef} style={{ height: '450px', width: '100%' }} />
     </Box>
+  );
+}
+
+interface EvidenceMiniMapProps {
+  lat: number;
+  lng: number;
+}
+
+function EvidenceMiniMap({ lat, lng }: EvidenceMiniMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    if (!mapRef.current) {
+      const map = L.map(containerRef.current, {
+        zoomControl: false,
+        attributionControl: false
+      }).setView([lat, lng], 14);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20
+      }).addTo(map);
+
+      const marker = L.marker([lat, lng]).addTo(map);
+      
+      mapRef.current = map;
+      markerRef.current = marker;
+    } else {
+      mapRef.current.setView([lat, lng], 14);
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      }
+    }
+
+    setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize();
+      }
+    }, 100);
+  }, [lat, lng]);
+
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <Box style={{ height: '180px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${GOLD_BORDER}`, position: 'relative' }}>
+      <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+    </Box>
+  );
+}
+
+interface EvidenceViewerContentProps {
+  file: GeoFile;
+  geoFiles: GeoFile[];
+  token: string | null;
+  onSelectFile: (file: GeoFile) => void;
+}
+
+function EvidenceViewerContent({ file, geoFiles, token, onSelectFile }: EvidenceViewerContentProps) {
+  const [copied, setCopied] = useState(false);
+
+  const folderFiles = geoFiles.filter(f => f.folderId === file.folderId);
+  const currentIndex = folderFiles.findIndex(f => f.id === file.id);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < folderFiles.length - 1;
+
+  const handlePrev = () => {
+    if (hasPrev) {
+      onSelectFile(folderFiles[currentIndex - 1]);
+    }
+  };
+
+  const handleNext = () => {
+    if (hasNext) {
+      onSelectFile(folderFiles[currentIndex + 1]);
+    }
+  };
+
+  const isImage = file.name.match(/\.(jpg|jpeg|png|heic|heif)$/i);
+  const isVideo = file.name.match(/\.(mp4|mov|webm)$/i);
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+  const fileUrl = `${apiUrl}/files/stream/${file.id}?token=${token}`;
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileExtension = (filename: string) => {
+    return filename.split('.').pop()?.toUpperCase() || 'INCONNU';
+  };
+
+  const formatExifText = () => {
+    const exif = file.exifData || {};
+    const lat = file.geoLat;
+    const lng = file.geoLng;
+    const dateStr = exif.DateTimeOriginal 
+      ? new Date(exif.DateTimeOriginal).toLocaleString('fr-FR')
+      : new Date(file.createdAt).toLocaleString('fr-FR');
+    const make = exif.Make || exif.make || 'Inconnu';
+    const model = exif.Model || exif.model || 'Inconnu';
+    const software = exif.Software || exif.software || 'Inconnu';
+    
+    return `--- MÉTADONNÉES DE LA PREUVE ---
+Fichier : ${file.name}
+Date/Heure : ${dateStr}
+Constructeur : ${make}
+Modèle : ${model}
+Logiciel : ${software}
+Source d'importation : ${file.userId ? 'Import Manuel' : 'Nikon Cloud'}
+Coordonnées GPS : ${lat ? lat.toFixed(6) : 'N/A'}, ${lng ? lng.toFixed(6) : 'N/A'}
+---------------------------------`;
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(formatExifText());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const exif = file.exifData || {};
+  const make = exif.Make || exif.make || 'Inconnu';
+  const model = exif.Model || exif.model || 'Inconnu';
+  const software = exif.Software || exif.software || 'Inconnu';
+  const dateStr = exif.DateTimeOriginal 
+    ? new Date(exif.DateTimeOriginal).toLocaleString('fr-FR')
+    : new Date(file.createdAt).toLocaleString('fr-FR');
+  const lat = file.geoLat;
+  const lng = file.geoLng;
+  const isManual = !!file.userId;
+
+  return (
+    <Grid gap="md" mt="xs">
+      {/* Colonne gauche (70% - Visionneuse Média) */}
+      <Grid.Col span={{ base: 12, md: 8 }}>
+        <Box style={{ 
+          position: 'relative', 
+          height: '480px', 
+          backgroundColor: '#0a0a0a', 
+          borderRadius: '8px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          overflow: 'hidden', 
+          border: '1px solid rgba(255,255,255,0.05)',
+          boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)'
+        }}>
+          {/* Flèche gauche */}
+          <ActionIcon 
+            variant="filled" 
+            color="dark" 
+            onClick={handlePrev} 
+            disabled={!hasPrev}
+            style={{ 
+              position: 'absolute', 
+              left: 16, 
+              zIndex: 10, 
+              backgroundColor: 'rgba(0,0,0,0.6)', 
+              borderRadius: '50%', 
+              width: 44, 
+              height: 44,
+              border: '1px solid rgba(255,255,255,0.1)',
+              opacity: hasPrev ? 1 : 0.3,
+              cursor: hasPrev ? 'pointer' : 'not-allowed'
+            }}
+          >
+            <IconChevronLeft size={24} color="#fff" />
+          </ActionIcon>
+
+          {/* Média */}
+          {isImage ? (
+            <img src={fileUrl} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt={file.name} />
+          ) : isVideo ? (
+            <video src={fileUrl} controls style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+          ) : (
+            <Text c="dimmed">Format de fichier non pris en charge.</Text>
+          )}
+
+          {/* Flèche droite */}
+          <ActionIcon 
+            variant="filled" 
+            color="dark" 
+            onClick={handleNext} 
+            disabled={!hasNext}
+            style={{ 
+              position: 'absolute', 
+              right: 16, 
+              zIndex: 10, 
+              backgroundColor: 'rgba(0,0,0,0.6)', 
+              borderRadius: '50%', 
+              width: 44, 
+              height: 44,
+              border: '1px solid rgba(255,255,255,0.1)',
+              opacity: hasNext ? 1 : 0.3,
+              cursor: hasNext ? 'pointer' : 'not-allowed'
+            }}
+          >
+            <IconChevronRight size={24} color="#fff" />
+          </ActionIcon>
+        </Box>
+      </Grid.Col>
+
+      {/* Colonne droite (30% - Barre latérale d'infos) */}
+      <Grid.Col span={{ base: 12, md: 4 }}>
+        <Stack gap="md">
+          {/* En-tête : Nom, taille, extension */}
+          <Box>
+            <Text fw={700} size="md" style={{ wordBreak: 'break-all', color: '#1e293b' }} mb="xs">
+              {file.name}
+            </Text>
+            <Group gap="xs">
+              <Badge color="brand" variant="outline" style={{ borderColor: GOLD_BORDER, color: GOLD }}>
+                {getFileExtension(file.name)}
+              </Badge>
+              <Text size="xs" style={{ color: '#475569' }}>
+                {formatFileSize(file.size)}
+              </Text>
+            </Group>
+          </Box>
+
+          {/* Indicateur de Source */}
+          <Group justify="space-between" align="center">
+            <Text size="xs" style={{ color: '#475569' }} fw={500}>Source :</Text>
+            <Badge color={isManual ? 'blue' : 'teal'} variant="filled" size="md">
+              {isManual ? 'Import Manuel' : 'Nikon Cloud'}
+            </Badge>
+          </Group>
+
+          {/* Mini-carte Leaflet */}
+          {lat !== null && lng !== null ? (
+            <Box>
+              <Text size="xs" style={{ color: '#475569' }} fw={500} mb="xs">Localisation GPS de la prise :</Text>
+              <EvidenceMiniMap lat={lat} lng={lng} />
+            </Box>
+          ) : (
+            <Alert color="yellow">
+              Aucune coordonnée GPS disponible.
+            </Alert>
+          )}
+
+          {/* Détails EXIF */}
+          <Box>
+            <Text size="xs" style={{ color: '#1e293b' }} fw={600} mb="xs">Métadonnées EXIF :</Text>
+            <Card withBorder style={{ backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }} p="xs" radius="sm">
+              <Stack gap="xs">
+                <Group justify="space-between">
+                  <Text size="xs" style={{ color: '#475569' }}>Date/Heure :</Text>
+                  <Text size="xs" fw={500} style={{ color: '#000000' }}>{dateStr}</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="xs" style={{ color: '#475569' }}>Appareil :</Text>
+                  <Text size="xs" fw={500} style={{ color: '#000000' }}>{make}</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="xs" style={{ color: '#475569' }}>Modèle :</Text>
+                  <Text size="xs" fw={500} style={{ color: '#000000' }}>{model}</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="xs" style={{ color: '#475569' }}>Logiciel :</Text>
+                  <Text size="xs" fw={500} style={{ color: '#000000' }}>{software}</Text>
+                </Group>
+                {lat !== null && lng !== null && (
+                  <Group justify="space-between">
+                    <Text size="xs" style={{ color: '#475569' }}>Position :</Text>
+                    <Text size="xs" fw={500} style={{ fontFamily: 'monospace', color: '#000000' }}>
+                      {lat.toFixed(6)}, {lng.toFixed(6)}
+                    </Text>
+                  </Group>
+                )}
+              </Stack>
+            </Card>
+          </Box>
+
+          {/* Bouton Copier */}
+          <Button 
+            leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+            color={copied ? 'teal' : 'brand'} 
+            style={{ backgroundColor: copied ? undefined : GOLD }} 
+            onClick={handleCopy}
+            fullWidth
+            mt="xs"
+          >
+            {copied ? 'Copié dans le presse-papiers' : 'Copier les métadonnées'}
+          </Button>
+        </Stack>
+      </Grid.Col>
+    </Grid>
   );
 }

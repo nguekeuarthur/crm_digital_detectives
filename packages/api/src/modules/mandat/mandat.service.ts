@@ -154,7 +154,12 @@ export class MandatService {
         name: true,
         geoLat: true,
         geoLng: true,
-        createdAt: true
+        folderId: true,
+        exifData: true,
+        userId: true,
+        createdAt: true,
+        size: true,
+        mimeType: true
       }
     });
   }

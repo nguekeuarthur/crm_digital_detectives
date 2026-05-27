@@ -101,6 +101,7 @@ app.use(helmet({
     includeSubDomains: true,
     preload: true,
   },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
