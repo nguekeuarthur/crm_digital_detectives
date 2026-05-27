@@ -26,6 +26,7 @@ import { quoteRouter } from './modules/quote/quote.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { retentionRoutes } from './modules/retention/retention.routes';
 import { ExportController } from './modules/export/export.controller';
+import statisticsRouter from './modules/statistics/statistics.routes';
 import { initCronJobs } from './shared/cron';
 import { mailRoutes } from './modules/mail/mail.routes';
 import { whatsappPublicRoutes, whatsappProtectedRoutes } from './modules/whatsapp/whatsapp.routes';
@@ -163,6 +164,7 @@ app.use('/api/v1/catalog', catalogRouter);
 app.use('/api/v1/quotes', quoteRouter);
 app.use('/api/v1/mail', mailRoutes);
 app.use('/api/v1/whatsapp', whatsappProtectedRoutes);
+app.use('/api/v1/statistics', statisticsRouter);
 
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

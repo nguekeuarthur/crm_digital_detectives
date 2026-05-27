@@ -21,9 +21,10 @@ import {
 } from '@mantine/core';
 import { IconShieldCheck, IconShieldX, IconDeviceMobileCheck, IconChevronRight } from '@tabler/icons-react';
 import { api } from '../../../../shared/api/base';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export function TwoFactorPage() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<'LOADING' | 'ENABLED' | 'DISABLED'>('LOADING');
   const [setupData, setSetupData] = useState<{ secret: string; qrCode: string } | null>(null);
   const [code, setCode] = useState('');
@@ -61,6 +62,7 @@ export function TwoFactorPage() {
       await api.post('/auth/2fa/verify', { code });
       setStatus('ENABLED');
       setSetupData(null);
+      setTimeout(() => navigate('/'), 1500);
     } catch {
       setError('Code de vérification invalide');
     } finally {
