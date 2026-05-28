@@ -15,7 +15,7 @@ export class FileService {
     mimeType: string;
     size: number;
     folderId: string;
-    userId: string;
+    userId?: string | null;
   }) {
     // 1. Vérification du dossier
     const folder = await prisma.dossier.findUnique({
@@ -77,7 +77,7 @@ export class FileService {
         size: data.size,
         mimeType: data.mimeType,
         folderId: data.folderId,
-        userId: data.userId,
+        userId: data.userId || null,
         exifData,
         geoLat,
         geoLng
@@ -85,21 +85,37 @@ export class FileService {
     });
 
     // 5. Audit Log
-    await AuditService.log({
-      userId: data.userId,
-      action: 'UPLOAD_FILE',
-      entity: 'File',
-      entityId: file.id,
-      newValue: { name: file.name, key: file.key }
-    });
+    if (data.userId) {
+      await AuditService.log({
+        userId: data.userId,
+        action: 'UPLOAD_FILE',
+        entity: 'File',
+        entityId: file.id,
+        newValue: { name: file.name, key: file.key }
+      });
+    }
 
     // 6. Activity Log
-    await ActivityService.push({
-      mandatId: folder.mandatId,
-      userId: data.userId,
-      type: 'FILE_ADDED',
-      payload: { fileName: file.name, folderName: folder.name }
-    });
+    let activityUserId = data.userId;
+    if (!activityUserId) {
+      const firstAdmin = await prisma.user.findFirst({
+        where: { role: 'ADMIN' }
+      });
+      activityUserId = firstAdmin?.id || null;
+    }
+
+    if (activityUserId) {
+      await ActivityService.push({
+        mandatId: folder.mandatId,
+        userId: activityUserId,
+        type: 'FILE_ADDED',
+        payload: { 
+          fileName: file.name, 
+          folderName: folder.name,
+          source: data.userId ? 'MANUAL' : 'NIKON_CLOUD'
+        }
+      });
+    }
 
     return file;
   }

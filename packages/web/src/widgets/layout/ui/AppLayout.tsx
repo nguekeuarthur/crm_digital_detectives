@@ -17,7 +17,8 @@ import {
   Tabs,
   Grid,
   ThemeIcon,
-  NavLink
+  NavLink,
+  Notification
 } from '@mantine/core';
 import { 
   IconPhoneCall, 
@@ -38,7 +39,8 @@ import {
   IconUsers,
   IconCalendar,
   IconUserCheck,
-  IconLogout
+  IconLogout,
+  IconCamera
 } from '@tabler/icons-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../../shared/api/base';
@@ -83,6 +85,15 @@ interface IncomingCallData {
   } | null;
 }
 
+interface NikonNotificationData {
+  fileId: string;
+  fileName: string;
+  mandateId: string;
+  mandateTitle: string;
+  geoLat: number | null;
+  geoLng: number | null;
+}
+
 interface GeoFile {
   id: string;
   name: string;
@@ -109,6 +120,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   // États CTI
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null);
+
+  // États Nikon Cloud notifications
+  const [nikonNotification, setNikonNotification] = useState<NikonNotificationData | null>(null);
+
+  const handleOpenImportedFile = async (mandateId: string, fileId: string) => {
+    try {
+      setLoadingGeoFiles(true);
+      const res = await api.get(`/mandates/${mandateId}/geo-files`);
+      const files = res.data as GeoFile[];
+      setGeoFiles(files);
+      const targetFile = files.find(f => f.id === fileId);
+      if (targetFile) {
+        setSelectedFileForViewer(targetFile);
+      }
+    } catch (err) {
+      console.error('Failed to open imported file:', err);
+    } finally {
+      setLoadingGeoFiles(false);
+    }
+  };
   
   // États Modal de consultation client
   const [clientModalId, setClientModalId] = useState<string | null>(null);
@@ -213,6 +244,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               }
               return current;
             });
+          }
+          else if (message.type === 'NIKON_FILE_IMPORTED') {
+            setNikonNotification(message.data);
           }
         } catch (err) {
           console.error('❌ [WS Client] Erreur lors du parsing du message :', err);
@@ -395,6 +429,88 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <AppShell.Main>
         {children}
       </AppShell.Main>
+
+      {/* ========================================== */}
+      {/* TOAST D'IMPORT AUTOMATIQUE NIKON CLOUD   */}
+      {/* ========================================== */}
+      {nikonNotification && (
+        <Box
+          style={{
+            position: 'fixed',
+            bottom: incomingCall ? 250 : 24, // S'empile si un appel est déjà affiché
+            right: 24,
+            width: 340,
+            zIndex: 1000,
+            transition: 'all 0.3s ease'
+          }}
+        >
+          <Notification
+            onClose={() => setNikonNotification(null)}
+            icon={<IconCamera size={18} />}
+            title={
+              <Text fw={700} size="sm" style={{ color: GOLD }}>
+                IMPORT AUTOMATIQUE NIKON
+              </Text>
+            }
+            withCloseButton
+            styles={{
+              root: {
+                backgroundColor: DARK_BG,
+                borderColor: GOLD_BORDER,
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                boxShadow: `0 10px 30px ${GOLD_GLOW}`,
+                backdropFilter: 'blur(10px)',
+                padding: '12px',
+              },
+              title: {
+                color: GOLD,
+              },
+              description: {
+                color: '#ddd',
+              },
+              closeButton: {
+                color: '#aaa',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                }
+              }
+            }}
+          >
+            <Stack gap="xs" mt="xs">
+              <Text size="xs" style={{ color: '#ccc' }}>
+                Une nouvelle photo a été synchronisée depuis le cloud Nikon :
+              </Text>
+              <Box>
+                <Text size="xs" fw={700} style={{ color: '#fff', wordBreak: 'break-all' }}>
+                  {nikonNotification.fileName}
+                </Text>
+                <Text size="xs" style={{ color: '#aaa', marginTop: '2px' }}>
+                  Mandat : <b>{nikonNotification.mandateTitle}</b>
+                </Text>
+                {nikonNotification.geoLat !== null && nikonNotification.geoLng !== null && (
+                  <Text size="xs" style={{ color: '#888', fontStyle: 'italic', marginTop: '2px' }}>
+                    GPS : {nikonNotification.geoLat.toFixed(5)}, {nikonNotification.geoLng.toFixed(5)}
+                  </Text>
+                )}
+              </Box>
+              <Button
+                size="xs"
+                variant="filled"
+                color="brand"
+                style={{ backgroundColor: GOLD }}
+                onClick={() => {
+                  handleOpenImportedFile(nikonNotification.mandateId, nikonNotification.fileId);
+                  setNikonNotification(null);
+                }}
+                fullWidth
+              >
+                Voir la preuve
+              </Button>
+            </Stack>
+          </Notification>
+        </Box>
+      )}
 
       {/* ========================================== */}
       {/* POP-UP DE REAL-TIME CTI (Appel Entrant)   */}
@@ -1158,28 +1274,28 @@ Coordonnées GPS : ${lat ? lat.toFixed(6) : 'N/A'}, ${lng ? lng.toFixed(6) : 'N/
 
           {/* Détails EXIF */}
           <Box>
-            <Text size="xs" style={{ color: '#1e293b' }} fw={600} mb="xs">Métadonnées EXIF :</Text>
+            <Text size="xs" style={{ color: '#000000' }} fw={600} mb="xs">Métadonnées EXIF :</Text>
             <Card withBorder style={{ backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }} p="xs" radius="sm">
               <Stack gap="xs">
                 <Group justify="space-between">
-                  <Text size="xs" style={{ color: '#475569' }}>Date/Heure :</Text>
+                  <Text size="xs" style={{ color: '#000000' }}>Date/Heure :</Text>
                   <Text size="xs" fw={500} style={{ color: '#000000' }}>{dateStr}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text size="xs" style={{ color: '#475569' }}>Appareil :</Text>
+                  <Text size="xs" style={{ color: '#000000' }}>Appareil :</Text>
                   <Text size="xs" fw={500} style={{ color: '#000000' }}>{make}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text size="xs" style={{ color: '#475569' }}>Modèle :</Text>
+                  <Text size="xs" style={{ color: '#000000' }}>Modèle :</Text>
                   <Text size="xs" fw={500} style={{ color: '#000000' }}>{model}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text size="xs" style={{ color: '#475569' }}>Logiciel :</Text>
+                  <Text size="xs" style={{ color: '#000000' }}>Logiciel :</Text>
                   <Text size="xs" fw={500} style={{ color: '#000000' }}>{software}</Text>
                 </Group>
                 {lat !== null && lng !== null && (
                   <Group justify="space-between">
-                    <Text size="xs" style={{ color: '#475569' }}>Position :</Text>
+                    <Text size="xs" style={{ color: '#000000' }}>Position :</Text>
                     <Text size="xs" fw={500} style={{ fontFamily: 'monospace', color: '#000000' }}>
                       {lat.toFixed(6)}, {lng.toFixed(6)}
                     </Text>

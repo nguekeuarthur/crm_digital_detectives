@@ -29,7 +29,10 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
   }
 
   // 3. Ignorer la vérification pour les webhooks externes (Stripe, Mollie, WordPress, etc.)
-  if (req.originalUrl.startsWith('/api/v1/webhooks')) {
+  if (
+    req.originalUrl.startsWith('/api/v1/webhooks') ||
+    req.originalUrl.startsWith('/api/v1/nikon')
+  ) {
     return next();
   }
 

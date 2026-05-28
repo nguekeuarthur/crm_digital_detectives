@@ -31,6 +31,7 @@ import { initCronJobs } from './shared/cron';
 import { mailRoutes } from './modules/mail/mail.routes';
 import { whatsappPublicRoutes, whatsappProtectedRoutes } from './modules/whatsapp/whatsapp.routes';
 import { ringoverPublicRoutes } from './modules/ringover/ringover.routes';
+import { nikonRoutes } from './modules/nikon/nikon.routes';
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
 // app.use('/api/v1/mandats', mandatRoutes);
@@ -141,6 +142,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/webhooks', webhookRouter); // Webhooks WP → CRM (publiques, sécurisées par secret)
 app.use('/api/v1/webhooks', whatsappPublicRoutes); // Webhook WhatsApp Twilio (public, pas de secret WP)
 app.use('/api/v1/webhooks', ringoverPublicRoutes); // Webhook Ringover CTI (public)
+app.use('/api/v1/nikon', nikonRoutes); // Webhook/Upload Nikon Cloud (public, sécurisé par clé)
 app.get('/api/v1/files/download-export/:id', ExportController.downloadExport);
 
 // ─── Middleware d'authentification global ───
