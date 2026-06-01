@@ -1,6 +1,6 @@
 import { AppShell, Group, Text, ThemeIcon, NavLink, Box } from '@mantine/core';
 import { Link, useLocation , useNavigate } from 'react-router-dom';
-import { IconDashboard, IconUsers, IconCalendar, IconUserCheck, IconLogout, IconPhone, IconFolders, IconChartBar, IconFileInvoice } from '@tabler/icons-react';
+import { IconDashboard, IconUsers, IconCalendar, IconUserCheck, IconLogout, IconPhone, IconFolders, IconChartBar, IconFileInvoice, IconMap } from '@tabler/icons-react';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
 
 
@@ -12,6 +12,7 @@ const navigationItems = [
   { label: 'Sous-traitants', icon: IconUserCheck, href: '/subcontractors' },
   { label: 'Communications', icon: IconPhone, href: '/communications' },
   { label: 'Dossiers', icon: IconFolders, href: '/dossiers' },
+  { label: 'Visionneuse EXIF', icon: IconMap, href: '/visionneuse' },
   { label: 'Rapports', icon: IconChartBar, href: '/rapports' },
 ];
 

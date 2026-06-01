@@ -9,6 +9,7 @@ import { PlanningPage } from '../../pages/planning/ui/PlanningPage';
 import { SubcontractorsPage } from '../../pages/subcontractors/ui/SubcontractorsPage';
 import { CommunicationsPage } from '../../pages/communications/ui/CommunicationsPage';
 import { DossiersPage } from '../../pages/dossiers/ui/DossiersPage';
+import { VisionneusePage } from '../../pages/visionneuse/ui/VisionneusePage';
 import { RapportsPage } from '../../pages/rapports/ui/RapportsPage';
 import { DevisPage } from '../../pages/devis/ui/DevisPage';
 import { TwoFactorPage } from '../../pages/settings/2fa/ui/TwoFactorPage';
@@ -84,6 +85,10 @@ const router = createBrowserRouter([
   {
     path: '/dossiers',
     element: <ProtectedRoute><DossiersPage /></ProtectedRoute>,
+  },
+  {
+    path: '/visionneuse',
+    element: <ProtectedRoute><VisionneusePage /></ProtectedRoute>,
   },
   {
     path: '/rapports',

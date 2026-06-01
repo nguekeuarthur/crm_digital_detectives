@@ -51,6 +51,22 @@ export class FileService {
       } catch (err) {
         console.warn('Impossible d\'extraire les métadonnées EXIF:', err);
       }
+    } else if (data.mimeType === 'video/mp4') {
+      try {
+        const gps = extractMp4Gps(data.buffer);
+        const creationDate = extractMp4CreationDate(data.buffer);
+        if (gps || creationDate) {
+          exifData = {
+            DateTimeOriginal: creationDate ? creationDate.toISOString() : undefined,
+            GPSLatitude: gps?.geoLat || undefined,
+            GPSLongitude: gps?.geoLng || undefined
+          };
+          geoLat = gps?.geoLat || null;
+          geoLng = gps?.geoLng || null;
+        }
+      } catch (err) {
+        console.warn('Impossible d\'extraire les métadonnées MP4:', err);
+      }
     }
 
     // 5. Création en base
@@ -164,4 +180,58 @@ export class FileService {
     if (!file) throw new ValidationError('Fichier non trouvé');
     return file;
   }
+}
+
+export function extractMp4Gps(buffer: Buffer): { geoLat: number | null, geoLng: number | null } | null {
+  // Search for the ©xyz atom (0xa9 0x78 0x79 0x7a)
+  const target = Buffer.from([0xa9, 0x78, 0x79, 0x7a]);
+  let index = buffer.indexOf(target);
+  if (index === -1) {
+    // Try 'xyz ' atom (0x78 0x79 0x7a 0x20)
+    const target2 = Buffer.from([0x78, 0x79, 0x7a, 0x20]);
+    index = buffer.indexOf(target2);
+    if (index === -1) return null;
+  }
+  
+  try {
+    // Slices 45 bytes around coordinates string
+    const dataSlice = buffer.subarray(index + 4, index + 45).toString('utf-8');
+    // Regex matches ISO 6709: e.g. +46.2044+006.1432/ or +46-006/
+    const regex = /([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)/;
+    const match = dataSlice.match(regex);
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        return { geoLat: lat, geoLng: lng };
+      }
+    }
+  } catch (err) {
+    console.warn('[MP4 GPS] Error parsing coordinate string:', err);
+  }
+  return null;
+}
+
+export function extractMp4CreationDate(buffer: Buffer): Date | null {
+  const mvhd = Buffer.from([0x6d, 0x76, 0x68, 0x64]); // 'mvhd'
+  const index = buffer.indexOf(mvhd);
+  if (index === -1) return null;
+  try {
+    const version = buffer.readUInt8(index + 4);
+    let secondsSince1904 = 0;
+    if (version === 0) {
+      secondsSince1904 = buffer.readUInt32BE(index + 8);
+    } else if (version === 1) {
+      const high = buffer.readUInt32BE(index + 8);
+      const low = buffer.readUInt32BE(index + 12);
+      secondsSince1904 = high * 4294967296 + low;
+    }
+    if (secondsSince1904 === 0) return null;
+    const epochDifference = 2082844800; // Seconds between 1904-01-01 and 1970-01-01
+    const unixSeconds = secondsSince1904 - epochDifference;
+    return new Date(unixSeconds * 1000);
+  } catch (err) {
+    console.warn('[MP4 DATE] Error parsing date:', err);
+  }
+  return null;
 }
