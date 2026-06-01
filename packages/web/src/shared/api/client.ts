@@ -23,10 +23,18 @@ export interface ClientListResponse {
   totalPages: number;
 }
 
+export interface DuplicateResult {
+  client: Client;
+  score: number;
+  reasons: string[];
+}
+
 export class ClientApi {
-  static async list(params?: { status?: string; limit?: number; page?: number }): Promise<ClientListResponse> {
+  static async list(params?: { status?: string; limit?: number; page?: number; search?: string }): Promise<ClientListResponse> {
     const response = await api.get('/clients', { params });
-    return response.data;
+    const raw = response.data;
+    // API returns { data: [...] } — normalize to { clients: [...] }
+    return { ...raw, clients: raw.data ?? raw.clients ?? [] };
   }
 
   static async getById(id: string): Promise<Client> {
@@ -46,5 +54,16 @@ export class ClientApi {
 
   static async delete(id: string): Promise<void> {
     await api.delete(`/clients/${id}`);
+  }
+
+  static async checkDuplicate(data: {
+    email?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+  }): Promise<{ duplicates: DuplicateResult[] }> {
+    const response = await api.post('/clients/check-duplicate', data);
+    return response.data;
   }
 }

@@ -1,56 +1,49 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Title, Text, Box, Button, Group, Grid, Card, Table, ScrollArea, Loader, Center, Badge, Input, SimpleGrid } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { useNavigate } from 'react-router-dom';
 import { IconSearch, IconPlus, IconLogout } from '@tabler/icons-react';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
-import { ClientApi } from '../../../shared/api/client';
+import { ClientApi, Client } from '../../../shared/api/client';
 import { StatisticsApi } from '../../../shared/api/statistics';
 import { formatCurrency } from '../../../shared/constants';
-
-interface ClientData {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  company?: string;
-  mandats: unknown[];
-}
+import { ClientFormModal } from './ClientFormModal';
 
 export function ClientsPage() {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
-  const [clients, setClients] = useState<ClientData[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({ total: 0, revenue: 0, mandateCount: 0 });
+  const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [clientsData, revenueData] = await Promise.all([
+        ClientApi.list({ limit: 100 }),
+        StatisticsApi.getRevenueByClient()
+      ]);
+
+      setClients(clientsData.clients || []);
+      const totalRevenue = revenueData.reduce((sum, c) => sum + c.estimatedRevenue, 0);
+      const totalMandates = revenueData.reduce((sum, c) => sum + c.mandateCount, 0);
+
+      setStats({
+        total: clientsData.total || 0,
+        revenue: totalRevenue,
+        mandateCount: totalMandates
+      });
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [clientsData, revenueData] = await Promise.all([
-          ClientApi.list({ limit: 100 }),
-          StatisticsApi.getRevenueByClient()
-        ]);
-
-        setClients(clientsData.clients || []);
-        const totalRevenue = revenueData.reduce((sum, c) => sum + c.estimatedRevenue, 0);
-        const totalMandates = revenueData.reduce((sum, c) => sum + c.mandateCount, 0);
-
-        setStats({
-          total: clientsData.total || 0,
-          revenue: totalRevenue,
-          mandateCount: totalMandates
-        });
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleLogout = () => {
     logout();
@@ -73,6 +66,7 @@ export function ClientsPage() {
 
   return (
     <Box p="md">
+      <ClientFormModal opened={formOpened} onClose={closeForm} onSuccess={fetchData} />
       <Grid gutter="md">
         <Grid.Col span={12}>
           <Group justify="space-between" align="center">
@@ -82,7 +76,7 @@ export function ClientsPage() {
             </div>
 
             <Group>
-              <Button leftSection={<IconPlus size={16} />} color="brand">Nouveau client</Button>
+              <Button leftSection={<IconPlus size={16} />} color="brand" onClick={openForm}>Nouveau client</Button>
               <Button onClick={handleLogout} variant="outline" color="red" leftSection={<IconLogout size={16} />}>Déconnexion</Button>
             </Group>
           </Group>

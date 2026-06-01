@@ -47,6 +47,29 @@ router.post('/', authorize('ADMIN', 'ENQUETEUR'), ClientController.create);
 
 /**
  * @openapi
+ * /clients/check-duplicate:
+ *   post:
+ *     summary: Détecter les doublons potentiels avant création
+ *     tags: [Clients]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email: { type: string }
+ *               phone: { type: string }
+ *               firstName: { type: string }
+ *               lastName: { type: string }
+ *               company: { type: string }
+ *     responses:
+ *       200:
+ *         description: Liste des doublons potentiels avec score de similarité
+ */
+router.post('/check-duplicate', authorize('ADMIN', 'ENQUETEUR'), ClientController.checkDuplicate);
+
+/**
+ * @openapi
  * /clients/{id}:
  *   get:
  *     summary: Détail d'un client

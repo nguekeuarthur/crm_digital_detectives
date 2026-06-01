@@ -5,6 +5,29 @@ import { NotFoundError, ValidationError } from '../../shared/errors';
 import { z } from 'zod';
 import { WPService } from '../wp/wp.service';
 
+function normalizePhone(phone: string): string {
+  return phone.replace(/[\s\-.()]/g, '').replace(/^\+?0*41/, '0');
+}
+
+function bigramSimilarity(a: string, b: string): number {
+  const A = a.toLowerCase().trim();
+  const B = b.toLowerCase().trim();
+  if (A === B) return 1;
+  if (A.length < 2 || B.length < 2) return 0;
+  const bigramsA = new Map<string, number>();
+  for (let i = 0; i < A.length - 1; i++) {
+    const bg = A[i] + A[i + 1];
+    bigramsA.set(bg, (bigramsA.get(bg) ?? 0) + 1);
+  }
+  let hits = 0;
+  for (let i = 0; i < B.length - 1; i++) {
+    const bg = B[i] + B[i + 1];
+    const n = bigramsA.get(bg) ?? 0;
+    if (n > 0) { bigramsA.set(bg, n - 1); hits++; }
+  }
+  return (2 * hits) / (A.length + B.length - 2);
+}
+
 export const ClientSchema = z.object({
   email: z.string().email('Email invalide'),
   firstName: z.string().min(2, 'Prénom trop court'),
@@ -179,5 +202,76 @@ export class ClientService {
       where: { clientId: id, deletedAt: null },
       orderBy: { createdAt: 'desc' }
     });
+  }
+
+  static async checkDuplicate(data: {
+    email?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+  }) {
+    const orConditions: Prisma.ClientWhereInput[] = [];
+    if (data.email) orConditions.push({ email: { equals: data.email, mode: 'insensitive' } });
+    if (data.firstName) orConditions.push({ firstName: { contains: data.firstName, mode: 'insensitive' } });
+    if (data.lastName) orConditions.push({ lastName: { contains: data.lastName, mode: 'insensitive' } });
+
+    const [nameCandidates, phoneCandidates] = await Promise.all([
+      orConditions.length > 0
+        ? prisma.client.findMany({ where: { deletedAt: null, OR: orConditions } })
+        : Promise.resolve([]),
+      data.phone
+        ? prisma.client.findMany({ where: { deletedAt: null, phone: { not: null } }, take: 200 })
+        : Promise.resolve([]),
+    ]);
+
+    const byId = new Map([
+      ...nameCandidates.map(c => [c.id, c] as const),
+      ...phoneCandidates.map(c => [c.id, c] as const),
+    ]);
+
+    const normalizedInputPhone = data.phone ? normalizePhone(data.phone) : null;
+
+    const duplicates = [...byId.values()]
+      .map(client => {
+        const reasons: string[] = [];
+        let score = 0;
+
+        if (data.email && client.email.toLowerCase() === data.email.toLowerCase()) {
+          score += 60;
+          reasons.push('Email identique');
+        }
+
+        if (normalizedInputPhone && client.phone && normalizePhone(client.phone) === normalizedInputPhone) {
+          score += 30;
+          reasons.push('Téléphone identique');
+        }
+
+        if (data.firstName && data.lastName) {
+          const sim = bigramSimilarity(
+            `${data.firstName} ${data.lastName}`,
+            `${client.firstName} ${client.lastName}`
+          );
+          if (sim >= 0.85) {
+            score += 25;
+            reasons.push('Nom complet identique');
+          } else if (sim >= 0.5) {
+            score += Math.round(sim * 20);
+            reasons.push('Nom similaire');
+          }
+        }
+
+        if (data.company && client.company &&
+          client.company.toLowerCase() === data.company.toLowerCase()) {
+          score += 10;
+          reasons.push('Société identique');
+        }
+
+        return { client, score: Math.min(score, 100), reasons };
+      })
+      .filter(r => r.score >= 30)
+      .sort((a, b) => b.score - a.score);
+
+    return { duplicates };
   }
 }
