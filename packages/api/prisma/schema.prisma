@@ -167,17 +167,15 @@ model Activity {
 
 enum Role {
   ADMIN
-  ENQUETEUR
-  SOUS_TRAITANT
+  INVESTIGATOR
+  SUBCONTRACTOR
 }
 
-enum MandatStatus {
-  OUVERT
-  EN_COURS
-  EN_ATTENTE_PREUVES
-  A_VALIDER
-  TERMINE
-  ANNULE
+enum MandateStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  CLOSED
 }
 
 enum ClientStatus {
