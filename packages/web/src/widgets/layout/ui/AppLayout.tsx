@@ -1,12 +1,13 @@
 import { AppShell, Group, Text, ThemeIcon, NavLink, Box } from '@mantine/core';
 import { Link, useLocation , useNavigate } from 'react-router-dom';
-import { IconDashboard, IconUsers, IconCalendar, IconUserCheck, IconLogout, IconPhone, IconFolders, IconChartBar, IconFileInvoice, IconMap } from '@tabler/icons-react';
+import { IconDashboard, IconUsers, IconCalendar, IconUserCheck, IconLogout, IconPhone, IconFolders, IconChartBar, IconFileInvoice, IconMap, IconBriefcase } from '@tabler/icons-react';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
 
 
 const navigationItems = [
   { label: 'Dashboard', icon: IconDashboard, href: '/' },
   { label: 'Clients & Mandats', icon: IconUsers, href: '/clients' },
+  { label: 'Mandats', icon: IconBriefcase, href: '/mandats' },
   { label: 'Devis', icon: IconFileInvoice, href: '/devis' },
   { label: 'Planning', icon: IconCalendar, href: '/planning' },
   { label: 'Sous-traitants', icon: IconUserCheck, href: '/subcontractors' },

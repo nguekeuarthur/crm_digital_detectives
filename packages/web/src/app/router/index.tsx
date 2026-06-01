@@ -10,6 +10,7 @@ import { SubcontractorsPage } from '../../pages/subcontractors/ui/Subcontractors
 import { CommunicationsPage } from '../../pages/communications/ui/CommunicationsPage';
 import { DossiersPage } from '../../pages/dossiers/ui/DossiersPage';
 import { ClientDetailPage } from '../../pages/client-detail/ui/ClientDetailPage';
+import { MandatsPage } from '../../pages/mandats/ui/MandatsPage';
 import { VisionneusePage } from '../../pages/visionneuse/ui/VisionneusePage';
 import { RapportsPage } from '../../pages/rapports/ui/RapportsPage';
 import { DevisPage } from '../../pages/devis/ui/DevisPage';
@@ -70,6 +71,10 @@ const router = createBrowserRouter([
   {
     path: '/clients/:id',
     element: <ProtectedRoute><ClientDetailPage /></ProtectedRoute>,
+  },
+  {
+    path: '/mandats',
+    element: <ProtectedRoute><MandatsPage /></ProtectedRoute>,
   },
   {
     path: '/devis',
