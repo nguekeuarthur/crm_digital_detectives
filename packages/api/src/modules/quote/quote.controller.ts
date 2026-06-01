@@ -83,9 +83,10 @@ export class QuoteController {
   static async send(req: AuthRequest, res: Response) {
     const quote = await QuoteService.getQuoteById(req.params.id as string);
 
+    let pdfPath = quote.pdfPath;
     // Générer le PDF si pas encore fait
-    if (!quote.pdfPath || !fs.existsSync(quote.pdfPath)) {
-      await PDFService.generateQuote(req.params.id as string);
+    if (!pdfPath || !fs.existsSync(pdfPath)) {
+      pdfPath = await PDFService.generateQuote(req.params.id as string);
     }
 
     // Mettre à jour le statut à SENT
@@ -96,7 +97,7 @@ export class QuoteController {
       quote.client.email,
       `${quote.client.firstName} ${quote.client.lastName}`,
       quote.reference,
-      quote.pdfPath!
+      pdfPath
     );
 
     res.json({

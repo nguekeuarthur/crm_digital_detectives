@@ -33,7 +33,7 @@ export function ClientsPage() {
           StatisticsApi.getRevenueByClient()
         ]);
 
-        setClients(clientsData.clients || []);
+        setClients(clientsData.data || []);
         const totalRevenue = revenueData.reduce((sum, c) => sum + c.estimatedRevenue, 0);
         const totalMandates = revenueData.reduce((sum, c) => sum + c.mandateCount, 0);
 
@@ -146,7 +146,13 @@ export function ClientsPage() {
                         <td>{formatCurrency((client.mandats?.length || 0) * 1500)}</td>
                         <td>15/12/2024</td>
                         <td>
-                          <Button size="xs" variant="light">Détails</Button>
+                          <Button 
+                            size="xs" 
+                            variant="light"
+                            onClick={() => navigate(`/clients?clientId=${client.id}`)}
+                          >
+                            Détails
+                          </Button>
                         </td>
                       </tr>
                     ))

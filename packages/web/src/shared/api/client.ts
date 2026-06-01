@@ -16,7 +16,7 @@ export interface Client {
 }
 
 export interface ClientListResponse {
-  clients: Client[];
+  data: Client[];
   total: number;
   page: number;
   limit: number;

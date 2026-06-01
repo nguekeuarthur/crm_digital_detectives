@@ -6,7 +6,6 @@ import { authorize } from '../../shared/middlewares/authorize';
 const router = Router();
 
 router.use(authenticate);
-router.use(authorize('ADMIN')); // Uniquement l'admin gère la facturation
 
 /**
  * @openapi
@@ -53,7 +52,7 @@ router.use(authorize('ADMIN')); // Uniquement l'admin gère la facturation
  *       404:
  *         description: Sous-traitant non trouvé
  */
-router.get('/subcontractors/:subcontractorId/summary', BillingController.getSummary);
+router.get('/subcontractors/:subcontractorId/summary', authorize('ADMIN'), BillingController.getSummary);
 
 /**
  * @openapi
@@ -79,7 +78,7 @@ router.get('/subcontractors/:subcontractorId/summary', BillingController.getSumm
  *       404:
  *         description: Sous-traitant non trouvé
  */
-router.get('/subcontractors/:subcontractorId/pdf', BillingController.downloadPDF);
+router.get('/subcontractors/:subcontractorId/pdf', authorize('ADMIN'), BillingController.downloadPDF);
 
 /**
  * @openapi
@@ -115,6 +114,107 @@ router.get('/subcontractors/:subcontractorId/pdf', BillingController.downloadPDF
  *                   type: integer
  *                   description: Nombre de saisies mises à jour
  */
-router.post('/mark-invoiced', BillingController.markAsInvoiced);
+router.post('/mark-invoiced', authorize('ADMIN'), BillingController.markAsInvoiced);
+
+/**
+ * @openapi
+ * /billing/invoices:
+ *   get:
+ *     summary: Lister les factures clients (avec filtres optionnels)
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: clientId
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: mandatId
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Liste des factures
+ */
+router.get('/invoices', authorize('ADMIN', 'ENQUETEUR'), BillingController.listInvoices);
+
+/**
+ * @openapi
+ * /billing/invoices/{id}/pay:
+ *   post:
+ *     summary: Générer un lien de paiement Stripe pour une facture
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: URL de paiement Stripe
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ */
+router.post('/invoices/:id/pay', authorize('ADMIN', 'ENQUETEUR'), BillingController.createPaymentLink);
+
+/**
+ * @openapi
+ * /billing/invoices/{id}/send-to-client:
+ *   post:
+ *     summary: Générer un lien de paiement Stripe et l'envoyer par email au client
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Lien de paiement envoyé par email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 url:
+ *                   type: string
+ *                 emailSent:
+ *                   type: boolean
+ */
+router.post('/invoices/:id/send-to-client', authorize('ADMIN', 'ENQUETEUR'), BillingController.sendPaymentLinkToClient);
+
+/**
+ * @openapi
+ * /billing/invoices/{id}/pdf:
+ *   get:
+ *     summary: Télécharger/Visualiser le PDF de la facture acquittée du client
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Fichier PDF de la facture acquittée
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get('/invoices/:id/pdf', authorize('ADMIN', 'ENQUETEUR'), BillingController.downloadInvoicePDF);
 
 export { router as billingRoutes };

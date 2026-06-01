@@ -1,7 +1,9 @@
 import React from 'react';
 import { MantineProvider, createTheme } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Notifications } from '@mantine/notifications';
 import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 
 const queryClient = new QueryClient();
 
@@ -40,6 +42,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme}>
+        <Notifications position="top-right" />
         {children}
       </MantineProvider>
     </QueryClientProvider>

@@ -16,9 +16,11 @@ import {
   Box,
   Tabs,
   Grid,
+  SimpleGrid,
   ThemeIcon,
   NavLink,
-  Notification
+  Notification,
+  Select
 } from '@mantine/core';
 import { 
   IconPhoneCall, 
@@ -40,10 +42,18 @@ import {
   IconCalendar,
   IconUserCheck,
   IconLogout,
-  IconCamera
+  IconCamera,
+  IconBrandStripe,
+  IconFileDescription,
+  IconAlertCircle,
+  IconPlus,
+  IconSettings,
+  IconFileText
 } from '@tabler/icons-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/api/base';
+import { getAccessToken } from '../../../shared/api/token';
+import { notifications } from '@mantine/notifications';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -71,6 +81,10 @@ const navigationItems = [
   { label: 'Clients & Mandats', icon: IconUsers, href: '/clients' },
   { label: 'Planning', icon: IconCalendar, href: '/planning' },
   { label: 'Sous-traitants', icon: IconUserCheck, href: '/subcontractors' },
+  { label: 'Modèles de Mandats', icon: IconFileText, href: '/settings/contracts' },
+  { label: 'Paramètres E-mail', icon: IconMail, href: '/settings/emails' },
+  { label: 'Paramètres Stripe', icon: IconBrandStripe, href: '/settings/stripe' },
+  { label: 'Sécurité (2FA)', icon: IconSettings, href: '/settings/2fa' },
 ];
 
 interface IncomingCallData {
@@ -142,13 +156,228 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
   
   // États Modal de consultation client
-  const [clientModalId, setClientModalId] = useState<string | null>(null);
+  // États Modal de consultation client sous forme de paramètres de recherche URL
+  const [searchParams, setSearchParams] = useSearchParams();
+  const clientModalId = searchParams.get('clientId');
+  const setClientModalId = (id: string | null) => {
+    setSearchParams(params => {
+      if (id) {
+        params.set('clientId', id);
+      } else {
+        params.delete('clientId');
+      }
+      return params;
+    });
+  };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [clientDetails, setClientDetails] = useState<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [clientActivities, setClientActivities] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>('mandats');
+
+  // États Facturation & Devis
+  const [clientQuotes, setClientQuotes] = useState<any[]>([]);
+  const [clientInvoices, setClientInvoices] = useState<any[]>([]);
+  const [newQuoteMandatId, setNewQuoteMandatId] = useState<string>('');
+  const [newQuoteLabel, setNewQuoteLabel] = useState<string>('Prestation d\'enquête standard');
+  const [newQuotePrice, setNewQuotePrice] = useState<number>(1500);
+  const [creatingQuote, setCreatingQuote] = useState(false);
+
+  const handleCreateQuote = async () => {
+    if (!clientModalId || !newQuoteMandatId || !newQuoteLabel || !newQuotePrice) {
+      notifications.show({
+        title: 'Erreur',
+        message: 'Veuillez remplir tous les champs',
+        color: 'red'
+      });
+      return;
+    }
+    setCreatingQuote(true);
+    try {
+      await api.post('/quotes', {
+        clientId: clientModalId,
+        mandatId: newQuoteMandatId,
+        taxRate: 7.7,
+        items: [
+          {
+            label: newQuoteLabel,
+            quantity: 1,
+            unitPrice: Number(newQuotePrice),
+            discount: 0
+          }
+        ]
+      });
+      notifications.show({
+        title: 'Succès',
+        message: 'Devis créé avec succès en statut brouillon (DRAFT)',
+        color: 'green'
+      });
+      // Rafraîchir les devis
+      const quotesRes = await api.get(`/quotes?clientId=${clientModalId}`);
+      setClientQuotes(quotesRes.data || []);
+    } catch (err: any) {
+      console.error(err);
+      notifications.show({
+        title: 'Erreur',
+        message: 'Impossible de créer le devis. ' + (err.response?.data?.error?.message || err.message),
+        color: 'red'
+      });
+    } finally {
+      setCreatingQuote(false);
+    }
+  };
+
+  const handleSendQuote = async (quoteId: string) => {
+    try {
+      notifications.show({
+        title: 'E-mail',
+        message: 'Génération du PDF et envoi de l\'e-mail...',
+        loading: true,
+        autoClose: false,
+        id: 'send-quote-loading'
+      });
+      await api.post(`/quotes/${quoteId}/send`);
+      notifications.update({
+        id: 'send-quote-loading',
+        title: 'Succès',
+        message: 'Le devis PDF a été envoyé au client par e-mail !',
+        color: 'green',
+        autoClose: true
+      });
+      // Rafraîchir
+      if (clientModalId) {
+        const quotesRes = await api.get(`/quotes?clientId=${clientModalId}`);
+        setClientQuotes(quotesRes.data || []);
+      }
+    } catch (err: any) {
+      console.error(err);
+      notifications.update({
+        id: 'send-quote-loading',
+        title: 'Erreur',
+        message: 'Impossible d\'envoyer le devis. ' + (err.response?.data?.error?.message || err.message),
+        color: 'red',
+        autoClose: true
+      });
+    }
+  };
+
+  const handleAcceptQuote = async (quoteId: string) => {
+    try {
+      await api.patch(`/quotes/${quoteId}/status`, { status: 'ACCEPTED' });
+      notifications.show({
+        title: 'Succès',
+        message: 'Devis accepté ! Une facture PENDING a été générée automatiquement.',
+        color: 'green'
+      });
+      // Rafraîchir
+      if (clientModalId) {
+        const [quotesRes, invoicesRes] = await Promise.all([
+          api.get(`/quotes?clientId=${clientModalId}`),
+          api.get(`/billing/invoices?clientId=${clientModalId}`)
+        ]);
+        setClientQuotes(quotesRes.data || []);
+        setClientInvoices(invoicesRes.data || []);
+      }
+    } catch (err: any) {
+      console.error(err);
+      notifications.show({
+        title: 'Erreur',
+        message: 'Impossible de valider le devis. ' + (err.response?.data?.error?.message || err.message),
+        color: 'red'
+      });
+    }
+  };
+
+  const handleSendInvoiceLink = async (invoiceId: string) => {
+    try {
+      notifications.show({
+        title: 'Envoi en cours',
+        message: 'Génération de la session Stripe et envoi de l\'e-mail...',
+        loading: true,
+        autoClose: false,
+        id: 'send-invoice-loading'
+      });
+      await api.post(`/billing/invoices/${invoiceId}/send-to-client`);
+      notifications.update({
+        id: 'send-invoice-loading',
+        title: 'Succès',
+        message: 'Lien de paiement Stripe envoyé au client par e-mail !',
+        color: 'green',
+        autoClose: true
+      });
+    } catch (err: any) {
+      console.error(err);
+      notifications.update({
+        id: 'send-invoice-loading',
+        title: 'Erreur',
+        message: 'Impossible d\'envoyer le lien de paiement. ' + (err.response?.data?.error?.message || err.message),
+        color: 'red',
+        autoClose: true
+      });
+    }
+  };
+
+  const handleSimulateInvoicePayment = async (invoiceId: string) => {
+    try {
+      notifications.show({
+        title: 'Simulation',
+        message: 'Simulation du paiement Stripe et déclenchement du webhook...',
+        loading: true,
+        autoClose: false,
+        id: 'simulate-payment-loading'
+      });
+      await api.post(
+        `/webhooks/stripe`,
+        {
+          type: 'checkout.session.completed',
+          data: {
+            object: {
+              client_reference_id: invoiceId
+            }
+          }
+        },
+        {
+          headers: {
+            'x-mock-webhook': 'true'
+          }
+        }
+      );
+      notifications.update({
+        id: 'simulate-payment-loading',
+        title: 'Paiement Confirmé !',
+        message: 'Paiement Stripe reçu. Facture payée et reçu PDF envoyé par e-mail.',
+        color: 'green',
+        autoClose: true
+      });
+      // Rafraîchir
+      if (clientModalId) {
+        const invoicesRes = await api.get(`/billing/invoices?clientId=${clientModalId}`);
+        setClientInvoices(invoicesRes.data || []);
+      }
+    } catch (err: any) {
+      console.error(err);
+      notifications.update({
+        id: 'simulate-payment-loading',
+        title: 'Erreur',
+        message: 'Erreur de simulation : ' + (err.response?.data?.error?.message || err.message),
+        color: 'red',
+        autoClose: true
+      });
+    }
+  };
+
+  const handleViewInvoicePDF = (invoiceId: string) => {
+    const token = getAccessToken();
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+    window.open(`${apiUrl}/billing/invoices/${invoiceId}/pdf?token=${token}`, '_blank');
+  };
+
+  const handleViewQuotePDF = (quoteId: string) => {
+    const token = getAccessToken();
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+    window.open(`${apiUrl}/quotes/${quoteId}/pdf?token=${token}`, '_blank');
+  };
 
   // États Modal de visualisation de carte des preuves
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -281,20 +510,46 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     if (!clientModalId) {
       setClientDetails(null);
       setClientActivities([]);
+      setClientQuotes([]);
+      setClientInvoices([]);
       return;
     }
 
     setLoadingDetails(true);
     Promise.all([
-      api.get(`/clients/${clientModalId}`),
-      api.get(`/clients/${clientModalId}/activity`)
+      api.get(`/clients/${clientModalId}`).then(res => res.data).catch(err => {
+        console.error('Erreur chargement client details:', err);
+        return null;
+      }),
+      api.get(`/clients/${clientModalId}/activity`).then(res => res.data).catch(err => {
+        console.error('Erreur chargement client activity:', err);
+        return [];
+      }),
+      api.get(`/quotes?clientId=${clientModalId}`).then(res => res.data).catch(err => {
+        console.error('Erreur chargement client quotes:', err);
+        return [];
+      }),
+      api.get(`/billing/invoices?clientId=${clientModalId}`).then(res => res.data).catch(err => {
+        console.error('Erreur chargement client invoices:', err);
+        return [];
+      })
     ])
-      .then(([detailsRes, activityRes]) => {
-        setClientDetails(detailsRes.data);
-        setClientActivities(activityRes.data);
+      .then(([details, activities, quotes, invoices]) => {
+        setClientDetails(details);
+        setClientActivities(activities || []);
+        setClientQuotes(quotes || []);
+        setClientInvoices(invoices || []);
+        
+        // Choisir par défaut le premier mandat pour le formulaire
+        const clientMandats = details?.mandats || [];
+        if (clientMandats.length > 0) {
+          setNewQuoteMandatId(clientMandats[0].id);
+        } else {
+          setNewQuoteMandatId('');
+        }
       })
       .catch((err) => {
-        console.error('❌ [CTI] Erreur lors du chargement des détails du client :', err);
+        console.error('❌ [CTI] Erreur inattendue lors du chargement des détails :', err);
       })
       .finally(() => {
         setLoadingDetails(false);
@@ -672,6 +927,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <Tabs.List>
                 <Tabs.Tab value="mandats" leftSection={<IconFolder size={16} />}>Dossiers & Mandats</Tabs.Tab>
                 <Tabs.Tab value="activity" leftSection={<IconActivity size={16} />}>Fil d&apos;activité</Tabs.Tab>
+                <Tabs.Tab value="billing" leftSection={<IconBrandStripe size={16} />}>Facturation & Devis</Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="mandats" pt="xs">
@@ -768,6 +1024,271 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <Text size="sm" c="dimmed" fs="italic">Aucune activité enregistrée.</Text>
                   )}
                 </Card>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="billing" pt="md">
+                <Stack gap="lg">
+                  {/* Résumé financier du client */}
+                  <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+                    <Card withBorder shadow="sm" radius="md" p="md">
+                      <Group justify="space-between">
+                        <Box>
+                          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Total Facturé</Text>
+                          <Text fw={700} size="xl" mt={4}>
+                            {clientInvoices.reduce((sum: number, inv: any) => sum + inv.amount, 0).toFixed(2)} CHF
+                          </Text>
+                        </Box>
+                        <ThemeIcon size="lg" radius="md" variant="light" color="gray">
+                          <IconBrandStripe size={20} />
+                        </ThemeIcon>
+                      </Group>
+                    </Card>
+
+                    <Card withBorder shadow="sm" radius="md" p="md">
+                      <Group justify="space-between">
+                        <Box>
+                          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Devis en attente</Text>
+                          <Text fw={700} size="xl" mt={4}>
+                            {clientQuotes.filter((q: any) => q.status === 'SENT').length}
+                          </Text>
+                        </Box>
+                        <ThemeIcon size="lg" radius="md" variant="light" color="blue">
+                          <IconFileDescription size={20} />
+                        </ThemeIcon>
+                      </Group>
+                    </Card>
+
+                    <Card withBorder shadow="sm" radius="md" p="md">
+                      <Group justify="space-between">
+                        <Box>
+                          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Factures Impayées</Text>
+                          <Text fw={700} size="xl" c={clientInvoices.some((i: any) => i.status === 'PENDING') ? 'red' : 'green'} mt={4}>
+                            {clientInvoices.filter((i: any) => i.status === 'PENDING').length}
+                          </Text>
+                        </Box>
+                        <ThemeIcon size="lg" radius="md" variant="light" color={clientInvoices.some((i: any) => i.status === 'PENDING') ? 'red' : 'green'}>
+                          <IconAlertCircle size={20} />
+                        </ThemeIcon>
+                      </Group>
+                    </Card>
+                  </SimpleGrid>
+
+                  {/* Créer un Devis Rapide */}
+                  <Card withBorder shadow="sm" radius="md" p="md">
+                    <Group mb="md" gap="xs">
+                      <IconPlus size={20} color={GOLD} />
+                      <Text fw={700} size="md">Nouveau devis</Text>
+                    </Group>
+                    
+                    {clientDetails?.mandats && clientDetails.mandats.length > 0 ? (
+                      <Stack gap="md">
+                        <Grid>
+                          <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                            <Select
+                              label="Mandat associé"
+                              placeholder="Choisir le mandat"
+                              data={clientDetails.mandats.map((m: any) => ({ value: m.id, label: m.title }))}
+                              value={newQuoteMandatId}
+                              onChange={(val: string | null) => setNewQuoteMandatId(val || '')}
+                            />
+                          </Grid.Col>
+                          <Grid.Col span={{ base: 12, sm: 6, md: 5 }}>
+                            <TextInput
+                              label="Libellé de la prestation"
+                              placeholder="Ex: Surveillance mobile et filature"
+                              value={newQuoteLabel}
+                              onChange={(e) => setNewQuoteLabel(e.currentTarget.value)}
+                            />
+                          </Grid.Col>
+                          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                            <TextInput
+                              label="Tarif HT (CHF)"
+                              type="number"
+                              value={newQuotePrice}
+                              onChange={(e) => setNewQuotePrice(Number(e.currentTarget.value))}
+                            />
+                          </Grid.Col>
+                        </Grid>
+                        <Group justify="flex-end">
+                          <Button
+                            onClick={handleCreateQuote}
+                            loading={creatingQuote}
+                            color="brand"
+                          >
+                            Créer le devis
+                          </Button>
+                        </Group>
+                      </Stack>
+                    ) : (
+                      <Alert color="yellow" variant="light" icon={<IconAlertCircle size={16} />}>
+                        Vous devez d'abord créer un mandat pour ce client avant de pouvoir lui faire un devis.
+                      </Alert>
+                    )}
+                  </Card>
+
+                  {/* Liste des Devis */}
+                  <Card withBorder shadow="sm" radius="md" p="md">
+                    <Group mb="md" gap="xs">
+                      <IconFileDescription size={20} color={GOLD} />
+                      <Text fw={700} size="md">Devis (Quotes)</Text>
+                    </Group>
+
+                    {clientQuotes && clientQuotes.length > 0 ? (
+                      <Table highlightOnHover>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>Référence</Table.Th>
+                            <Table.Th>Mandat</Table.Th>
+                            <Table.Th>Montant TTC</Table.Th>
+                            <Table.Th>Statut</Table.Th>
+                            <Table.Th>Actions</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {clientQuotes.map((quote: any) => (
+                            <Table.Tr key={quote.id}>
+                              <Table.Td fw={500}>{quote.reference}</Table.Td>
+                              <Table.Td>
+                                <Text size="sm" lineClamp={1}>{quote.mandat?.title || 'N/A'}</Text>
+                              </Table.Td>
+                              <Table.Td>{quote.totalTTC.toFixed(2)} CHF</Table.Td>
+                              <Table.Td>
+                                <Badge
+                                  size="sm"
+                                  variant="light"
+                                  color={
+                                    quote.status === 'ACCEPTED' ? 'green' :
+                                    quote.status === 'SENT' ? 'blue' :
+                                    quote.status === 'REFUSED' ? 'red' : 'gray'
+                                  }
+                                >
+                                  {quote.status}
+                                </Badge>
+                              </Table.Td>
+                              <Table.Td>
+                                <Group gap="xs">
+                                  <Button
+                                    size="xs"
+                                    variant="subtle"
+                                    color="gray"
+                                    onClick={() => handleViewQuotePDF(quote.id)}
+                                  >
+                                    PDF
+                                  </Button>
+                                  {(quote.status === 'DRAFT' || quote.status === 'SENT') && (
+                                    <>
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        color="blue"
+                                        leftSection={<IconMail size={14} />}
+                                        onClick={() => handleSendQuote(quote.id)}
+                                      >
+                                        {quote.status === 'DRAFT' ? 'Envoyer' : 'Renvoyer'}
+                                      </Button>
+                                      <Button
+                                        size="xs"
+                                        variant="filled"
+                                        color="green"
+                                        leftSection={<IconCheck size={14} />}
+                                        onClick={() => handleAcceptQuote(quote.id)}
+                                      >
+                                        Générer Facture (Client OK)
+                                      </Button>
+                                    </>
+                                  )}
+                                </Group>
+                              </Table.Td>
+                            </Table.Tr>
+                          ))}
+                        </Table.Tbody>
+                      </Table>
+                    ) : (
+                      <Text size="sm" c="dimmed" fs="italic">Aucun devis créé pour ce client.</Text>
+                    )}
+                  </Card>
+
+                  {/* Liste des Factures */}
+                  <Card withBorder shadow="sm" radius="md" p="md">
+                    <Group mb="md" gap="xs">
+                      <IconBrandStripe size={20} color={GOLD} />
+                      <Text fw={700} size="md">Factures clients (Stripe)</Text>
+                    </Group>
+
+                    {clientInvoices && clientInvoices.length > 0 ? (
+                      <Table highlightOnHover>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>N° Facture</Table.Th>
+                            <Table.Th>Mandat</Table.Th>
+                            <Table.Th>Montant TTC</Table.Th>
+                            <Table.Th>Statut</Table.Th>
+                            <Table.Th>Actions</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {clientInvoices.map((invoice: any) => (
+                            <Table.Tr key={invoice.id}>
+                              <Table.Td fw={500}>FAC-{invoice.id.substring(0, 8).toUpperCase()}</Table.Td>
+                              <Table.Td>
+                                <Text size="sm" lineClamp={1}>{invoice.mandat?.title || 'N/A'}</Text>
+                              </Table.Td>
+                              <Table.Td>{invoice.amount.toFixed(2)} CHF</Table.Td>
+                              <Table.Td>
+                                <Badge
+                                  size="sm"
+                                  variant="light"
+                                  color={invoice.status === 'PAID' ? 'green' : 'yellow'}
+                                >
+                                  {invoice.status === 'PAID' ? 'PAYÉE' : 'EN ATTENTE'}
+                                </Badge>
+                              </Table.Td>
+                              <Table.Td>
+                                <Group gap="xs">
+                                  {invoice.status === 'PENDING' && (
+                                    <>
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        color="indigo"
+                                        leftSection={<IconMail size={14} />}
+                                        onClick={() => handleSendInvoiceLink(invoice.id)}
+                                      >
+                                        Envoyer Lien
+                                      </Button>
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        color="teal"
+                                        leftSection={<IconCheck size={14} />}
+                                        onClick={() => handleSimulateInvoicePayment(invoice.id)}
+                                      >
+                                        Payer (Démo)
+                                      </Button>
+                                    </>
+                                  )}
+                                  {invoice.status === 'PAID' && (
+                                    <Button
+                                      size="xs"
+                                      variant="light"
+                                      color="green"
+                                      leftSection={<IconFileDescription size={14} />}
+                                      onClick={() => handleViewInvoicePDF(invoice.id)}
+                                    >
+                                      Reçu PDF
+                                    </Button>
+                                  )}
+                                </Group>
+                              </Table.Td>
+                            </Table.Tr>
+                          ))}
+                        </Table.Tbody>
+                      </Table>
+                    ) : (
+                      <Text size="sm" c="dimmed" fs="italic">Aucune facture générée pour ce client.</Text>
+                    )}
+                  </Card>
+                </Stack>
               </Tabs.Panel>
             </Tabs>
 

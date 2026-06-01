@@ -34,98 +34,112 @@ export class PDFService {
 
       // ─── EN-TÊTE ───────────────────────────────────────
       doc
-        .fontSize(22)
-        .fillColor('#1a1a2e')
-        .text('DIGITALDETECTIVES', 50, 50, { align: 'left' })
-        .fontSize(9)
+        .fontSize(24)
+        .fillColor('#d4af37')
+        .text('DIGITAL DETECTIVES', 50, 50, { align: 'left' })
+        .fontSize(10)
         .fillColor('#666')
-        .text('Agence d\'investigation privée', 50, 75)
-        .text('Suisse — Confidentiel', 50, 87);
+        .text('Agence d\'investigation privée', 50, 78)
+        .text('Avenue des Alpes 12', 50, 93)
+        .text('1006 Lausanne, Suisse', 50, 108)
+        .text('Email: contact@digitaldetectives.ch', 50, 123)
+        .text('Tél: +41 21 123 45 67', 50, 138);
 
       // Informations du devis (coin droit)
       doc
-        .fontSize(10)
+        .fontSize(14)
         .fillColor('#1a1a2e')
-        .text(`Devis N° ${quote.reference}`, 350, 50, { align: 'right' })
-        .fontSize(9)
+        .text(`DEVIS N° ${quote.reference}`, 350, 50, { align: 'right' })
+        .fontSize(10)
         .fillColor('#666')
-        .text(`Date : ${quote.createdAt.toLocaleDateString('fr-CH')}`, 350, 65, { align: 'right' });
+        .text(`Date d'émission : ${quote.createdAt.toLocaleDateString('fr-CH')}`, 350, 70, { align: 'right' });
 
       if (quote.expiresAt) {
-        doc.text(`Valable jusqu'au : ${quote.expiresAt.toLocaleDateString('fr-CH')}`, 350, 78, { align: 'right' });
+        doc.fillColor('#e03131').text(`Valable jusqu'au : ${quote.expiresAt.toLocaleDateString('fr-CH')}`, 350, 85, { align: 'right' });
       }
 
       // Ligne de séparation
       doc
-        .moveTo(50, 110)
-        .lineTo(545, 110)
-        .strokeColor('#e0e0e0')
+        .moveTo(50, 160)
+        .lineTo(545, 160)
+        .strokeColor('#d4af37')
         .stroke();
 
       // ─── CLIENT ────────────────────────────────────────
       doc
-        .fontSize(11)
+        .fontSize(12)
         .fillColor('#1a1a2e')
-        .text('Destinataire :', 50, 125)
-        .fontSize(10)
+        .text('Destinataire :', 50, 180, { underline: true })
+        .fontSize(11)
         .fillColor('#333')
-        .text(`${quote.client.firstName} ${quote.client.lastName}`, 50, 140);
+        .text(`${quote.client.firstName} ${quote.client.lastName}`, 50, 198);
 
+      let clientY = 213;
       if (quote.client.company) {
-        doc.text(quote.client.company, 50, 153);
+        doc.text(quote.client.company, 50, clientY);
+        clientY += 15;
       }
       if (quote.client.email) {
-        doc.text(quote.client.email, 50, 166);
+        doc.text(quote.client.email, 50, clientY);
+        clientY += 15;
+      }
+      // @ts-ignore
+      if (quote.client.phone) {
+        // @ts-ignore
+        doc.text(quote.client.phone, 50, clientY);
       }
 
       // Référence mandat
       doc
-        .fontSize(10)
+        .fontSize(12)
         .fillColor('#1a1a2e')
-        .text(`Mandat : ${quote.mandat.title}`, 300, 125, { align: 'right' });
+        .text(`Concerne :`, 300, 180, { align: 'right', underline: true })
+        .fontSize(11)
+        .fillColor('#333')
+        .text(`Mandat : ${quote.mandat.title}`, 300, 198, { align: 'right' });
 
       // ─── TABLEAU DES PRESTATIONS ───────────────────────
-      const tableTop = 200;
+      const tableTop = 270;
 
       // En-tête du tableau
       doc
-        .rect(50, tableTop, 495, 22)
+        .rect(50, tableTop, 495, 25)
         .fillColor('#1a1a2e')
         .fill();
 
       doc
-        .fontSize(9)
-        .fillColor('#fff')
-        .text('Prestation', 55, tableTop + 6)
-        .text('Qté', 320, tableTop + 6, { width: 40, align: 'center' })
-        .text('Prix unit.', 365, tableTop + 6, { width: 60, align: 'right' })
-        .text('Remise', 430, tableTop + 6, { width: 40, align: 'center' })
-        .text('Total HT', 475, tableTop + 6, { width: 70, align: 'right' });
+        .fontSize(10)
+        .fillColor('#d4af37')
+        .text('Désignation', 55, tableTop + 8)
+        .text('Qté', 320, tableTop + 8, { width: 40, align: 'center' })
+        .text('Prix Unit.', 365, tableTop + 8, { width: 60, align: 'right' })
+        .text('Remise', 430, tableTop + 8, { width: 40, align: 'center' })
+        .text('Total HT', 475, tableTop + 8, { width: 70, align: 'right' });
 
       // Lignes du tableau
-      let y = tableTop + 25;
-      doc.fillColor('#333').fontSize(9);
+      let y = tableTop + 30;
+      doc.fillColor('#333').fontSize(10);
 
       for (const [index, item] of quote.items.entries()) {
         const bgColor = index % 2 === 0 ? '#f9f9f9' : '#fff';
-        doc.rect(50, y - 3, 495, 18).fillColor(bgColor).fill();
+        doc.rect(50, y - 5, 495, 25).fillColor(bgColor).fill();
 
         doc
           .fillColor('#333')
           .text(item.label, 55, y, { width: 260 })
           .text(String(item.quantity), 320, y, { width: 40, align: 'center' })
-          .text(`${item.unitPrice.toFixed(2)} CHF`, 365, y, { width: 60, align: 'right' })
+          .text(`${item.unitPrice.toFixed(2)}`, 365, y, { width: 60, align: 'right' })
           .text(item.discount > 0 ? `${item.discount}%` : '-', 430, y, { width: 40, align: 'center' })
-          .text(`${item.totalHT.toFixed(2)} CHF`, 475, y, { width: 70, align: 'right' });
+          .text(`${item.totalHT.toFixed(2)}`, 475, y, { width: 70, align: 'right' });
 
-        y += 18;
+        y += 25;
       }
 
       // Ligne de séparation sous le tableau
-      doc.moveTo(50, y + 5).lineTo(545, y + 5).strokeColor('#e0e0e0').stroke();
+      doc.moveTo(50, y + 5).lineTo(545, y + 5).strokeColor('#1a1a2e').stroke();
 
       // ─── TOTAUX ────────────────────────────────────────
-      y += 15;
+      y += 20;
 
       doc
         .fontSize(10)

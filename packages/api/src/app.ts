@@ -20,6 +20,7 @@ import { customFieldRoutes } from './modules/custom-fields/custom-field.routes';
 import { subcontractorRoutes } from './modules/subcontractor/subcontractor.routes';
 import { timeEntryRoutes } from './modules/time-entry/time-entry.routes';
 import { billingRoutes } from './modules/billing/billing.routes';
+import { BillingController } from './modules/billing/billing.controller';
 import { syncRouter, webhookRouter } from './modules/sync/sync.routes';
 import { catalogRouter } from './modules/catalog/catalog.routes';
 import { quoteRouter } from './modules/quote/quote.routes';
@@ -29,6 +30,9 @@ import { ExportController } from './modules/export/export.controller';
 import statisticsRouter from './modules/statistics/statistics.routes';
 import { initCronJobs } from './shared/cron';
 import { mailRoutes } from './modules/mail/mail.routes';
+import { emailTemplateRoutes } from './modules/mail/email-template.routes';
+import { EmailQueueService } from './modules/mail/email-queue.service';
+import { contractRoutes } from './modules/contract/contract.routes';
 import { whatsappPublicRoutes, whatsappProtectedRoutes } from './modules/whatsapp/whatsapp.routes';
 import { ringoverPublicRoutes } from './modules/ringover/ringover.routes';
 import { nikonRoutes } from './modules/nikon/nikon.routes';
@@ -43,6 +47,11 @@ const app = express();
 
 // Initialisation des tâches de fond
 initCronJobs();
+
+// Seed des templates d'e-mails par défaut (si absents)
+EmailQueueService.seedDefaultTemplates().catch(err => {
+  console.error('⚠️ Erreur lors du seed des templates email:', err);
+});
 
 // Configuration Swagger
 const swaggerOptions = {
@@ -110,6 +119,10 @@ app.use(cors({
   credentials: true
 }));
 app.use(cookieParser());
+
+// Stripe webhook must be mounted BEFORE express.json() to verify request signatures using the raw body
+app.post('/api/v1/webhooks/stripe', express.raw({ type: 'application/json' }), BillingController.stripeWebhook);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(xssSanitizer);
@@ -119,7 +132,7 @@ app.use(morgan('dev'));
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limite chaque IP à 100 requêtes par fenêtre
+  max: 1500, // Sécurisé (contre le DDoS/brute-force) mais suffisamment large pour l'utilisation normale d'un CRM (100 requêtes/minute)
   message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Trop de requêtes, veuillez réessayer plus tard.' } }
 });
 app.use('/api/', limiter);
@@ -164,7 +177,9 @@ app.use('/api/v1/sync', syncRouter);
 // webhookRouter est monté AVANT authenticate (voir ligne 95)
 app.use('/api/v1/catalog', catalogRouter);
 app.use('/api/v1/quotes', quoteRouter);
+app.use('/api/v1/contracts', contractRoutes);
 app.use('/api/v1/mail', mailRoutes);
+app.use('/api/v1/mail', emailTemplateRoutes);
 app.use('/api/v1/whatsapp', whatsappProtectedRoutes);
 app.use('/api/v1/statistics', statisticsRouter);
 

@@ -6,10 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 function sanitizeString(str: string): string {
   return str
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/>/g, '&gt;');
 }
 
 /**
@@ -18,7 +15,7 @@ function sanitizeString(str: string): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function sanitizeObject(obj: any, parentKey?: string): any {
   if (typeof obj === 'string') {
-    const sensitiveKeys = ['password', 'passwordConfirm', 'refreshToken', 'token', 'code', 'accessToken'];
+    const sensitiveKeys = ['password', 'passwordConfirm', 'refreshToken', 'token', 'code', 'accessToken', 'htmlContent', 'htmlBody'];
     if (parentKey && sensitiveKeys.includes(parentKey)) {
       return obj;
     }

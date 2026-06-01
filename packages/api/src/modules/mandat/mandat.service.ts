@@ -3,6 +3,7 @@ import { AuditService } from '../audit/audit.service';
 import { MandatStatus } from '@prisma/client';
 import { ValidationError } from '../../shared/errors';
 import { ActivityService } from './activity.service';
+import { EmailQueueService } from '../mail/email-queue.service';
 
 export class MandatService {
   static readonly STANDARD_DOSSIERS = [
@@ -55,6 +56,19 @@ export class MandatService {
       type: 'MANDAT_CREATED',
       payload: { title: mandat.title }
     });
+
+    // 5. Email automatique de confirmation au client
+    try {
+      const client = await prisma.client.findUnique({ where: { id: data.clientId } });
+      if (client?.email) {
+        await EmailQueueService.enqueue('MANDAT_CREATED', client.email, {
+          clientName: `${client.firstName} ${client.lastName}`,
+          mandatTitle: mandat.title,
+        });
+      }
+    } catch (emailErr) {
+      console.error('⚠️ Erreur lors de l\'ajout de l\'email de confirmation à la queue :', emailErr);
+    }
 
     return prisma.mandat.findUnique({
       where: { id: mandat.id },
@@ -126,6 +140,24 @@ export class MandatService {
         type: 'STATUS_CHANGED',
         payload: { from: current.status, to: data.status }
       });
+
+      // Email automatique de clôture si le mandat passe à TERMINE
+      if (data.status === MandatStatus.TERMINE) {
+        try {
+          const mandatWithClient = await prisma.mandat.findUnique({
+            where: { id },
+            include: { client: true }
+          });
+          if (mandatWithClient?.client?.email) {
+            await EmailQueueService.enqueue('MANDAT_CLOSED', mandatWithClient.client.email, {
+              clientName: `${mandatWithClient.client.firstName} ${mandatWithClient.client.lastName}`,
+              mandatTitle: mandatWithClient.title,
+            });
+          }
+        } catch (emailErr) {
+          console.error('⚠️ Erreur lors de l\'ajout de l\'email de clôture à la queue :', emailErr);
+        }
+      }
     }
 
     await AuditService.log({

@@ -39,3 +39,5 @@ packages/api/test-whatsapp.ts
 packages/api/verify-activity.ts
 packages/api/decrypt-latest.ts
 packages/api/test-ringover.ts
+
+packages/api/storage/
