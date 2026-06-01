@@ -48,7 +48,11 @@ import {
   IconAlertCircle,
   IconPlus,
   IconSettings,
-  IconFileText
+  IconFileText,
+  IconFolders,
+  IconChartBar,
+  IconFileInvoice,
+  IconMap
 } from '@tabler/icons-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/api/base';
@@ -79,8 +83,14 @@ const DARK_BG = 'rgba(17, 17, 17, 0.95)';
 const navigationItems = [
   { label: 'Dashboard', icon: IconDashboard, href: '/' },
   { label: 'Clients & Mandats', icon: IconUsers, href: '/clients' },
+  { label: 'Mandats', icon: IconBriefcase, href: '/mandats' },
+  { label: 'Devis', icon: IconFileInvoice, href: '/devis' },
   { label: 'Planning', icon: IconCalendar, href: '/planning' },
   { label: 'Sous-traitants', icon: IconUserCheck, href: '/subcontractors' },
+  { label: 'Communications', icon: IconPhone, href: '/communications' },
+  { label: 'Dossiers', icon: IconFolders, href: '/dossiers' },
+  { label: 'Visionneuse EXIF', icon: IconMap, href: '/visionneuse' },
+  { label: 'Rapports', icon: IconChartBar, href: '/rapports' },
   { label: 'Modèles de Mandats', icon: IconFileText, href: '/settings/contracts' },
   { label: 'Paramètres E-mail', icon: IconMail, href: '/settings/emails' },
   { label: 'Paramètres Stripe', icon: IconBrandStripe, href: '/settings/stripe' },

@@ -16,6 +16,12 @@ const EmailSettingsPage = React.lazy(() => import('../../pages/settings/emails/u
 const ContractSettingsPage = React.lazy(() => import('../../pages/settings/contracts/ui/ContractSettingsPage').then(m => ({ default: m.ContractSettingsPage })));
 const StripeSettingsPage = React.lazy(() => import('../../pages/settings/stripe/ui/StripeSettingsPage').then(m => ({ default: m.StripeSettingsPage })));
 const NotFoundPage = React.lazy(() => import('../../pages/error/ui/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
+const MandatsPage = React.lazy(() => import('../../pages/mandats/ui/MandatsPage').then(m => ({ default: m.MandatsPage })));
+const DevisPage = React.lazy(() => import('../../pages/devis/ui/DevisPage').then(m => ({ default: m.DevisPage })));
+const CommunicationsPage = React.lazy(() => import('../../pages/communications/ui/CommunicationsPage').then(m => ({ default: m.CommunicationsPage })));
+const DossiersPage = React.lazy(() => import('../../pages/dossiers/ui/DossiersPage').then(m => ({ default: m.DossiersPage })));
+const VisionneusePage = React.lazy(() => import('../../pages/visionneuse/ui/VisionneusePage').then(m => ({ default: m.VisionneusePage })));
+const RapportsPage = React.lazy(() => import('../../pages/rapports/ui/RapportsPage').then(m => ({ default: m.RapportsPage })));
 
 // Composant de chargement global pour Suspense
 const GlobalLoader = () => (
@@ -93,6 +99,30 @@ const router = createBrowserRouter([
   {
     path: '/settings/stripe',
     element: <ProtectedRoute><StripeSettingsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/mandats',
+    element: <ProtectedRoute><MandatsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/devis',
+    element: <ProtectedRoute><DevisPage /></ProtectedRoute>,
+  },
+  {
+    path: '/communications',
+    element: <ProtectedRoute><CommunicationsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/dossiers',
+    element: <ProtectedRoute><DossiersPage /></ProtectedRoute>,
+  },
+  {
+    path: '/visionneuse',
+    element: <ProtectedRoute><VisionneusePage /></ProtectedRoute>,
+  },
+  {
+    path: '/rapports',
+    element: <ProtectedRoute><RapportsPage /></ProtectedRoute>,
   },
   {
     path: '*',
