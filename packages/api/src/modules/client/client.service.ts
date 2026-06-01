@@ -1,7 +1,7 @@
 import { prisma } from '../../shared/prisma';
 import { AuditService } from '../audit/audit.service';
 import { ClientStatus, Prisma } from '@prisma/client';
-import { ValidationError } from '../../shared/errors';
+import { NotFoundError, ValidationError } from '../../shared/errors';
 import { z } from 'zod';
 import { WPService } from '../wp/wp.service';
 
@@ -118,7 +118,7 @@ export class ClientService {
     });
 
     if (!client || client.deletedAt) {
-      throw new Error('Client non trouvé');
+      throw new NotFoundError('Client non trouvé');
     }
 
     return client;
@@ -127,9 +127,21 @@ export class ClientService {
   static async updateClient(id: string, data: Partial<z.infer<typeof ClientSchema>>, userId: string) {
     const current = await this.getClientById(id);
 
+    const validatedData = ClientSchema.partial().parse(data);
+
+    if (validatedData.email && validatedData.email !== current.email) {
+      const conflict = await prisma.client.findUnique({ where: { email: validatedData.email } });
+      if (conflict) throw new ValidationError('Un client avec cet email existe déjà');
+    }
+
+    if (validatedData.phone && validatedData.phone !== current.phone) {
+      const conflict = await prisma.client.findFirst({ where: { phone: validatedData.phone, deletedAt: null } });
+      if (conflict) throw new ValidationError('Un client avec ce numéro de téléphone existe déjà');
+    }
+
     const updated = await prisma.client.update({
       where: { id },
-      data
+      data: validatedData
     });
 
     await AuditService.log({
@@ -145,6 +157,8 @@ export class ClientService {
   }
 
   static async deleteClient(id: string, userId: string) {
+    await this.getClientById(id); // throws NotFoundError if missing or already deleted
+
     const client = await prisma.client.update({
       where: { id },
       data: { deletedAt: new Date() }

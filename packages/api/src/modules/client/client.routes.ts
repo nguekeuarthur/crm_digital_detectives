@@ -12,6 +12,10 @@ const router = Router();
  *     tags: [Clients]
  *     parameters:
  *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Recherche full-text sur prénom, nom, email, société
+ *       - in: query
  *         name: status
  *         schema: { type: string, enum: [PROSPECT, ACTIF, INACTIF] }
  *       - in: query
@@ -20,6 +24,12 @@ const router = Router();
  *       - in: query
  *         name: endDate
  *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
  *     responses:
  *       200:
  *         description: Liste paginée des clients
