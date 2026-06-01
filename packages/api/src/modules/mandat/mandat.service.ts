@@ -1,6 +1,6 @@
 import { prisma } from '../../shared/prisma';
 import { AuditService } from '../audit/audit.service';
-import { MandatStatus } from '@prisma/client';
+import { MandateStatus } from '@prisma/client';
 import { ValidationError } from '../../shared/errors';
 import { ActivityService } from './activity.service';
 
@@ -23,7 +23,7 @@ export class MandatService {
           title: data.title,
           description: data.description,
           clientId: data.clientId,
-          status: MandatStatus.OUVERT,
+          status: MandateStatus.ACTIVE,
         }
       });
 
@@ -62,7 +62,7 @@ export class MandatService {
     });
   }
 
-  static async getMandates(filters: { status?: MandatStatus; clientId?: string; enqueteurId?: string; page?: number; limit?: number }) {
+  static async getMandates(filters: { status?: MandateStatus; clientId?: string; enqueteurId?: string; page?: number; limit?: number }) {
     const { status, clientId, enqueteurId, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
@@ -102,7 +102,7 @@ export class MandatService {
     return mandat;
   }
 
-  static async updateMandat(id: string, data: { title?: string; description?: string; status?: MandatStatus; userId: string }) {
+  static async updateMandat(id: string, data: { title?: string; description?: string; status?: MandateStatus; userId: string }) {
     const current = await this.getMandatById(id);
 
     // Validation des transitions de statut
@@ -251,9 +251,9 @@ export class MandatService {
   }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private static validateStatusTransition(current: MandatStatus, _next: MandatStatus) {
+  private static validateStatusTransition(current: MandateStatus, _next: MandateStatus) {
     // Un mandat TERMINE ou ANNULE ne peut plus être modifié
-    if (current === MandatStatus.TERMINE || current === MandatStatus.ANNULE) {
+    if (current === MandateStatus.CLOSED || current === MandateStatus.SUSPENDED) {
       throw new ValidationError(`Transition impossible : le mandat est déjà ${current}`);
     }
   }

@@ -25,8 +25,10 @@ export function ClientFormModal({ opened, onClose, onSuccess }: Props) {
   const [showDuplicates, setShowDuplicates] = useState(false);
 
   const setField = (field: keyof typeof emptyForm) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm(prev => ({ ...prev, [field]: e.currentTarget.value }));
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setForm(prev => ({ ...prev, [field]: value }));
+    };
 
   const handleClose = () => {
     setForm(emptyForm);

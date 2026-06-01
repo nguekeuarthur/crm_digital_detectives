@@ -1,166 +1,170 @@
 import { useEffect, useState } from 'react';
-import { Title, Text, Box, Button, Group, Grid, Card, SimpleGrid, Paper, Badge, Table, ScrollArea, Loader, Center } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../../features/auth/model/auth.store';
-import { IconLogout, IconSearch, IconPlus, IconTrendingUp, IconUsers, IconCash, IconPercentage } from '@tabler/icons-react';
-import { StatCard } from '../../../widgets/layout/ui/StatCard';
+import {
+  Title, Text, Box, Button, Group, Grid, Card,
+  SimpleGrid, Table, ScrollArea, Loader, Center, ThemeIcon,
+} from '@mantine/core';
+import {
+  IconPlus, IconTrendingUp, IconUsers, IconCash,
+  IconPercentage, IconAlertCircle, IconCheck, IconActivity,
+} from '@tabler/icons-react';
 import { StatisticsApi, DashboardStats } from '../../../shared/api/statistics';
 
+const QUICK_STATS = [
+  { label: 'Actions urgentes', value: 7, sub: 'Nécessitent votre attention', icon: IconAlertCircle, color: '#EF4444' },
+  { label: 'Tâches terminées', value: 18, sub: 'Cette semaine', icon: IconCheck, color: '#22C55E' },
+  { label: 'Activités récentes', value: 42, sub: 'Dernières 24h', icon: IconActivity, color: '#3B82F6' },
+];
+
 export function DashboardPage() {
-  const navigate = useNavigate();
-  const logout = useAuthStore((state) => state.logout);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [recentMandates] = useState<unknown[]>([]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const data = await StatisticsApi.getDashboardStats();
-        setStats(data);
-        // TODO: Fetch recent mandates
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
+    StatisticsApi.getDashboardStats()
+      .then(setStats)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   if (loading) {
     return (
-      <Center style={{ minHeight: '100vh' }}>
+      <Center style={{ minHeight: '60vh' }}>
         <Loader />
       </Center>
     );
   }
 
-
-
   return (
     <Box p="md">
-      <Grid gutter="md">
-        <Grid.Col span={12}>
-          <Group justify="space-between" align="center">
-            <div>
-              <Title order={2}>Dashboard</Title>
-              <Text c="dimmed" size="sm">Vue d&apos;ensemble de votre activité d&apos;investigation</Text>
-            </div>
+      {/* Header */}
+      <Group justify="space-between" mb="lg">
+        <div>
+          <Title order={2}>Dashboard</Title>
+          <Text c="dimmed" size="sm">Vue d&apos;ensemble de votre activité d&apos;investigation</Text>
+        </div>
+        <Button leftSection={<IconPlus size={16} />} color="brand">
+          Nouveau mandat
+        </Button>
+      </Group>
 
-            <Group>
-              <Button leftSection={<IconSearch size={16} />} variant="default">Rechercher</Button>
-              <Button leftSection={<IconPlus size={16} />} color="brand">Nouveau mandat</Button>
-              <Button onClick={handleLogout} variant="outline" color="red" leftSection={<IconLogout size={16} />}>Déconnexion</Button>
+      {/* Stats principales */}
+      {stats && (
+        <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md" mb="lg">
+          <Card withBorder padding="md" radius="md">
+            <Group justify="space-between" align="flex-start">
+              <div>
+                <Text size="sm" c="dimmed">Mandats actifs</Text>
+                <Title order={2} mt={4}>{stats.activeMandates.value}</Title>
+                <Text size="xs" c={stats.activeMandates.change >= 0 ? 'green' : 'red'}>
+                  {stats.activeMandates.change >= 0 ? '+' : ''}{stats.activeMandates.change}% ce mois
+                </Text>
+              </div>
+              <ThemeIcon variant="light" size="lg" radius="md" color="brand">
+                <IconTrendingUp size={18} />
+              </ThemeIcon>
             </Group>
-          </Group>
-        </Grid.Col>
+          </Card>
 
-        {stats && (
-          <Grid.Col span={12}>
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-              <StatCard
-                label="Mandats actifs"
-                value={stats.activeMandates.value}
-                change={stats.activeMandates.change}
-                icon={<IconTrendingUp size={20} />}
-              />
-              <StatCard
-                label="Clients totaux"
-                value={stats.totalClients.value}
-                change={stats.totalClients.change}
-                icon={<IconUsers size={20} />}
-              />
-              <StatCard
-                label="CA du mois"
-                value={stats.monthRevenue.value}
-                change={stats.monthRevenue.change}
-                currency
-                icon={<IconCash size={20} />}
-              />
-              <StatCard
-                label="Taux de réussite"
-                value={`${stats.successRate.value}%`}
-                change={stats.successRate.change}
-                icon={<IconPercentage size={20} />}
-              />
-            </SimpleGrid>
-          </Grid.Col>
-        )}
+          <Card withBorder padding="md" radius="md">
+            <Group justify="space-between" align="flex-start">
+              <div>
+                <Text size="sm" c="dimmed">Clients totaux</Text>
+                <Title order={2} mt={4}>{stats.totalClients.value}</Title>
+                <Text size="xs" c={stats.totalClients.change >= 0 ? 'green' : 'red'}>
+                  {stats.totalClients.change >= 0 ? '+' : ''}{stats.totalClients.change}% ce mois
+                </Text>
+              </div>
+              <ThemeIcon variant="light" size="lg" radius="md" color="blue">
+                <IconUsers size={18} />
+              </ThemeIcon>
+            </Group>
+          </Card>
 
-        <Grid.Col span={12} md={8}>
-          <Paper padding="md" shadow="sm" radius="md" withBorder>
-            <Group justify="space-between" align="center" mb="md">
-              <Text fw={700}>Mandats récents</Text>
-              <Text c="dimmed" size="sm">Aperçu des derniers mandats en cours</Text>
+          <Card withBorder padding="md" radius="md">
+            <Group justify="space-between" align="flex-start">
+              <div>
+                <Text size="sm" c="dimmed">CA du mois</Text>
+                <Title order={2} mt={4}>
+                  {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(stats.monthRevenue.value)}
+                </Title>
+                <Text size="xs" c={stats.monthRevenue.change >= 0 ? 'green' : 'red'}>
+                  {stats.monthRevenue.change >= 0 ? '+' : ''}{stats.monthRevenue.change}% ce mois
+                </Text>
+              </div>
+              <ThemeIcon variant="light" size="lg" radius="md" color="green">
+                <IconCash size={18} />
+              </ThemeIcon>
+            </Group>
+          </Card>
+
+          <Card withBorder padding="md" radius="md">
+            <Group justify="space-between" align="flex-start">
+              <div>
+                <Text size="sm" c="dimmed">Taux de réussite</Text>
+                <Title order={2} mt={4}>{stats.successRate.value}%</Title>
+                <Text size="xs" c={stats.successRate.change >= 0 ? 'green' : 'red'}>
+                  {stats.successRate.change >= 0 ? '+' : ''}{stats.successRate.change}% ce mois
+                </Text>
+              </div>
+              <ThemeIcon variant="light" size="lg" radius="md" color="yellow">
+                <IconPercentage size={18} />
+              </ThemeIcon>
+            </Group>
+          </Card>
+        </SimpleGrid>
+      )}
+
+      <Grid gutter="md">
+        {/* Mandats récents */}
+        <Grid.Col span={{ base: 12, md: 8 }}>
+          <Card withBorder padding="md" radius="md">
+            <Group justify="space-between" mb="md">
+              <Text fw={600}>Mandats récents</Text>
+              <Text c="dimmed" size="xs">Aperçu des derniers mandats en cours</Text>
             </Group>
 
             <ScrollArea>
               <Table horizontalSpacing="md" verticalSpacing="sm">
-                <thead>
-                  <tr>
-                    <th>ID Mandat</th>
-                    <th>Client</th>
-                    <th>Type</th>
-                    <th>Statut</th>
-                    <th>Priorité</th>
-                    <th>Échéance</th>
-                    <th>Montant</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentMandates.length > 0 ? (
-                    recentMandates.map((m) => (
-                      <tr key={m.id}>
-                        <td>{m.id}</td>
-                        <td>{m.client}</td>
-                        <td>{m.type}</td>
-                        <td><Badge color={m.status === 'En cours' ? 'blue' : 'gray'}>{m.status}</Badge></td>
-                        <td>
-                          <Badge color={m.priority === 'Haute' ? 'red' : m.priority === 'Moyenne' ? 'yellow' : 'green'}>{m.priority}</Badge>
-                        </td>
-                        <td>{m.due}</td>
-                        <td>{m.amount}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={7} align="center">
-                        <Text c="dimmed" size="sm">Aucun mandat trouvé</Text>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>ID Mandat</Table.Th>
+                    <Table.Th>Client</Table.Th>
+                    <Table.Th>Type</Table.Th>
+                    <Table.Th>Statut</Table.Th>
+                    <Table.Th>Priorité</Table.Th>
+                    <Table.Th>Échéance</Table.Th>
+                    <Table.Th>Montant</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  <Table.Tr>
+                    <Table.Td colSpan={7} style={{ textAlign: 'center' }}>
+                      <Text c="dimmed" size="sm" py="md">Aucun mandat trouvé</Text>
+                    </Table.Td>
+                  </Table.Tr>
+                </Table.Tbody>
               </Table>
             </ScrollArea>
-          </Paper>
+          </Card>
         </Grid.Col>
 
-        <Grid.Col span={12} md={4}>
+        {/* Activité rapide */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
           <SimpleGrid cols={1} spacing="md">
-            <Card shadow="sm" padding="md" radius="md" withBorder>
-              <Text size="sm" c="dimmed">Actions urgentes</Text>
-              <Title order={3}>7</Title>
-              <Text c="dimmed" size="xs">Nécessitent votre attention</Text>
-            </Card>
-
-            <Card shadow="sm" padding="md" radius="md" withBorder>
-              <Text size="sm" c="dimmed">Tâches terminées</Text>
-              <Title order={3}>18</Title>
-              <Text c="dimmed" size="xs">Cette semaine</Text>
-            </Card>
-
-            <Card shadow="sm" padding="md" radius="md" withBorder>
-              <Text size="sm" c="dimmed">Activités récentes</Text>
-              <Title order={3}>42</Title>
-              <Text c="dimmed" size="xs">Dernières 24h</Text>
-            </Card>
+            {QUICK_STATS.map(({ label, value, sub, icon: Icon, color }) => (
+              <Card key={label} withBorder padding="md" radius="md">
+                <Group justify="space-between" align="flex-start">
+                  <div>
+                    <Text size="sm" c="dimmed">{label}</Text>
+                    <Title order={3} mt={2}>{value}</Title>
+                    <Text size="xs" c="dimmed">{sub}</Text>
+                  </div>
+                  <ThemeIcon variant="light" size="lg" radius="md" style={{ color }}>
+                    <Icon size={18} />
+                  </ThemeIcon>
+                </Group>
+              </Card>
+            ))}
           </SimpleGrid>
         </Grid.Col>
       </Grid>

@@ -1,17 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Title, Text, Box, Button, Group, Grid, Card, Table, ScrollArea, Loader, Center, Badge, Input, SimpleGrid } from '@mantine/core';
+import {
+  Title, Text, Box, Button, Group, Grid, Card,
+  Table, ScrollArea, Loader, Center, Badge, Input, SimpleGrid, ThemeIcon,
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useNavigate } from 'react-router-dom';
-import { IconSearch, IconPlus, IconLogout } from '@tabler/icons-react';
-import { useAuthStore } from '../../../features/auth/model/auth.store';
+import { IconSearch, IconPlus, IconUsers, IconBriefcase, IconCoin } from '@tabler/icons-react';
 import { ClientApi, Client } from '../../../shared/api/client';
 import { StatisticsApi } from '../../../shared/api/statistics';
 import { formatCurrency } from '../../../shared/constants';
 import { ClientFormModal } from './ClientFormModal';
 
 export function ClientsPage() {
-  const navigate = useNavigate();
-  const logout = useAuthStore((state) => state.logout);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,43 +21,30 @@ export function ClientsPage() {
     try {
       const [clientsData, revenueData] = await Promise.all([
         ClientApi.list({ limit: 100 }),
-        StatisticsApi.getRevenueByClient()
+        StatisticsApi.getRevenueByClient(),
       ]);
-
       setClients(clientsData.clients || []);
-      const totalRevenue = revenueData.reduce((sum, c) => sum + c.estimatedRevenue, 0);
-      const totalMandates = revenueData.reduce((sum, c) => sum + c.mandateCount, 0);
-
-      setStats({
-        total: clientsData.total || 0,
-        revenue: totalRevenue,
-        mandateCount: totalMandates
-      });
-    } catch (error) {
-      console.error('Error fetching clients:', error);
+      const totalRevenue = revenueData.reduce((s, c) => s + c.estimatedRevenue, 0);
+      const totalMandates = revenueData.reduce((s, c) => s + c.mandateCount, 0);
+      setStats({ total: clientsData.total || 0, revenue: totalRevenue, mandateCount: totalMandates });
+    } catch (err) {
+      console.error('Error fetching clients:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  const filteredClients = clients.filter(c =>
+  const filtered = clients.filter(c =>
     `${c.firstName} ${c.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.company?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
+    (c.company?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   );
 
   if (loading) {
     return (
-      <Center style={{ minHeight: '100vh' }}>
+      <Center style={{ minHeight: '60vh' }}>
         <Loader />
       </Center>
     );
@@ -67,91 +53,125 @@ export function ClientsPage() {
   return (
     <Box p="md">
       <ClientFormModal opened={formOpened} onClose={closeForm} onSuccess={fetchData} />
-      <Grid gutter="md">
-        <Grid.Col span={12}>
-          <Group justify="space-between" align="center">
+
+      {/* Header */}
+      <Group justify="space-between" mb="lg">
+        <div>
+          <Title order={2}>Clients &amp; Mandats</Title>
+          <Text c="dimmed" size="sm">Gérez vos clients et mandats</Text>
+        </div>
+        <Button leftSection={<IconPlus size={16} />} color="brand" onClick={openForm}>
+          Nouveau client
+        </Button>
+      </Group>
+
+      {/* Stats */}
+      <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mb="lg">
+        <Card withBorder padding="md" radius="md">
+          <Group justify="space-between" align="flex-start">
             <div>
-              <Title order={2}>Clients & Mandats</Title>
-              <Text c="dimmed" size="sm">Gérer vos clients et mandats</Text>
-            </div>
-
-            <Group>
-              <Button leftSection={<IconPlus size={16} />} color="brand" onClick={openForm}>Nouveau client</Button>
-              <Button onClick={handleLogout} variant="outline" color="red" leftSection={<IconLogout size={16} />}>Déconnexion</Button>
-            </Group>
-          </Group>
-        </Grid.Col>
-
-        <Grid.Col span={12}>
-          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-            <Card shadow="sm" padding="md" radius="md" withBorder>
               <Text size="sm" c="dimmed">Clients totaux</Text>
-              <Title order={3}>{stats.total}</Title>
-            </Card>
-            <Card shadow="sm" padding="md" radius="md" withBorder>
+              <Title order={2} mt={4}>{stats.total}</Title>
+            </div>
+            <ThemeIcon variant="light" size="lg" radius="md" color="brand">
+              <IconUsers size={18} />
+            </ThemeIcon>
+          </Group>
+        </Card>
+        <Card withBorder padding="md" radius="md">
+          <Group justify="space-between" align="flex-start">
+            <div>
               <Text size="sm" c="dimmed">Mandats actifs</Text>
-              <Title order={3}>{stats.mandateCount}</Title>
-            </Card>
-            <Card shadow="sm" padding="md" radius="md" withBorder>
+              <Title order={2} mt={4}>{stats.mandateCount}</Title>
+            </div>
+            <ThemeIcon variant="light" size="lg" radius="md" color="blue">
+              <IconBriefcase size={18} />
+            </ThemeIcon>
+          </Group>
+        </Card>
+        <Card withBorder padding="md" radius="md">
+          <Group justify="space-between" align="flex-start">
+            <div>
               <Text size="sm" c="dimmed">CA total</Text>
-              <Title order={3}>{formatCurrency(stats.revenue)}</Title>
-            </Card>
-          </SimpleGrid>
-        </Grid.Col>
+              <Title order={2} mt={4}>{formatCurrency(stats.revenue)}</Title>
+            </div>
+            <ThemeIcon variant="light" size="lg" radius="md" color="green">
+              <IconCoin size={18} />
+            </ThemeIcon>
+          </Group>
+        </Card>
+      </SimpleGrid>
 
+      {/* Table */}
+      <Grid gutter="md">
         <Grid.Col span={12}>
           <Input
             placeholder="Rechercher par nom, email, téléphone..."
             leftSection={<IconSearch size={16} />}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            onChange={e => setSearchQuery(e.currentTarget.value)}
             mb="md"
           />
 
-          <Card shadow="sm" padding="md" radius="md" withBorder>
+          <Card withBorder padding="md" radius="md">
             <ScrollArea>
-              <Table horizontalSpacing="md" verticalSpacing="sm">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nom</th>
-                    <th>Contact</th>
-                    <th>Mandats</th>
-                    <th>Statut</th>
-                    <th>CA total</th>
-                    <th>Dernier contact</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredClients.length > 0 ? (
-                    filteredClients.map((client) => (
-                      <tr key={client.id}>
-                        <td>{client.id.substring(0, 8)}</td>
-                        <td>{`${client.firstName} ${client.lastName}`}</td>
-                        <td>
-                          <div>
-                            <Text size="sm">{client.email}</Text>
-                            {client.phone && <Text size="xs" c="dimmed">{client.phone}</Text>}
-                          </div>
-                        </td>
-                        <td>{client.mandats?.length || 0}</td>
-                        <td><Badge color="blue">Actif</Badge></td>
-                        <td>{formatCurrency((client.mandats?.length || 0) * 1500)}</td>
-                        <td>15/12/2024</td>
-                        <td>
-                          <Button size="xs" variant="light">Détails</Button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={8} align="center">
-                        <Text c="dimmed" size="sm">Aucun client trouvé</Text>
-                      </td>
-                    </tr>
+              <Table horizontalSpacing="md" verticalSpacing="sm" striped highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>ID</Table.Th>
+                    <Table.Th>Nom</Table.Th>
+                    <Table.Th>Contact</Table.Th>
+                    <Table.Th>Mandats</Table.Th>
+                    <Table.Th>Statut</Table.Th>
+                    <Table.Th>CA total</Table.Th>
+                    <Table.Th>Dernier contact</Table.Th>
+                    <Table.Th>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {filtered.length > 0 ? filtered.map(client => (
+                    <Table.Tr key={client.id}>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace" c="dimmed">{client.id.substring(0, 8)}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" fw={500}>{client.firstName} {client.lastName}</Text>
+                        {client.company && <Text size="xs" c="dimmed">{client.company}</Text>}
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{client.email}</Text>
+                        {client.phone && <Text size="xs" c="dimmed">{client.phone}</Text>}
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" ta="center">{client.mandats?.length ?? 0}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge
+                          color={client.status === 'ACTIF' ? 'green' : client.status === 'PROSPECT' ? 'blue' : 'gray'}
+                          variant="light"
+                          size="sm"
+                        >
+                          {client.status}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{formatCurrency((client.mandats?.length ?? 0) * 1500)}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">15/12/2024</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Button size="xs" variant="light">Détails</Button>
+                      </Table.Td>
+                    </Table.Tr>
+                  )) : (
+                    <Table.Tr>
+                      <Table.Td colSpan={8} style={{ textAlign: 'center' }}>
+                        <Text c="dimmed" size="sm" py="md">Aucun client trouvé</Text>
+                      </Table.Td>
+                    </Table.Tr>
                   )}
-                </tbody>
+                </Table.Tbody>
               </Table>
             </ScrollArea>
           </Card>

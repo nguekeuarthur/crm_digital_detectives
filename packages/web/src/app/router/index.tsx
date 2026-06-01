@@ -7,6 +7,10 @@ import { DashboardPage } from '../../pages/dashboard/ui/DashboardPage';
 import { ClientsPage } from '../../pages/clients/ui/ClientsPage';
 import { PlanningPage } from '../../pages/planning/ui/PlanningPage';
 import { SubcontractorsPage } from '../../pages/subcontractors/ui/SubcontractorsPage';
+import { CommunicationsPage } from '../../pages/communications/ui/CommunicationsPage';
+import { DossiersPage } from '../../pages/dossiers/ui/DossiersPage';
+import { RapportsPage } from '../../pages/rapports/ui/RapportsPage';
+import { DevisPage } from '../../pages/devis/ui/DevisPage';
 import { TwoFactorPage } from '../../pages/settings/2fa/ui/TwoFactorPage';
 import { AppLayout } from '../../widgets/layout/ui/AppLayout';
 import { useAuthStore } from '../../features/auth/model/auth.store';
@@ -62,12 +66,28 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><ClientsPage /></ProtectedRoute>,
   },
   {
+    path: '/devis',
+    element: <ProtectedRoute><DevisPage /></ProtectedRoute>,
+  },
+  {
     path: '/planning',
     element: <ProtectedRoute><PlanningPage /></ProtectedRoute>,
   },
   {
     path: '/subcontractors',
     element: <ProtectedRoute><SubcontractorsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/communications',
+    element: <ProtectedRoute><CommunicationsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/dossiers',
+    element: <ProtectedRoute><DossiersPage /></ProtectedRoute>,
+  },
+  {
+    path: '/rapports',
+    element: <ProtectedRoute><RapportsPage /></ProtectedRoute>,
   },
   {
     path: '/settings/2fa',

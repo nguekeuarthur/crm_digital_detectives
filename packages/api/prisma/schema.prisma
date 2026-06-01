@@ -97,7 +97,7 @@ model Mandat {
   id          String       @id @default(uuid())
   title       String
   description String?
-  status      MandatStatus @default(OUVERT)
+  status      MandateStatus @default(DRAFT)
   clientId    String
   enqueteurId String?
   createdAt   DateTime     @default(now())
@@ -167,8 +167,8 @@ model Activity {
 
 enum Role {
   ADMIN
-  INVESTIGATOR
-  SUBCONTRACTOR
+  ENQUETEUR
+  SOUS_TRAITANT
 }
 
 enum MandateStatus {
