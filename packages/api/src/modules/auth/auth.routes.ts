@@ -6,6 +6,7 @@ const router = Router();
 
 // --- PUBLIC ROUTES ---
 router.post('/register', AuthController.register);
+router.post('/register/verify-2fa', AuthController.verifyRegistration2FA);
 router.post('/login', AuthController.login);
 router.post('/login-2fa', AuthController.login2FA);
 router.post('/refresh', AuthController.refresh);

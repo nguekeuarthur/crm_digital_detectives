@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { AuthService } from './auth.service';
 import { AuthRequest } from '../../shared/middlewares/authenticate';
 import { TwoFactorService } from './two-factor.service';
@@ -6,16 +7,32 @@ import { WPService } from '../wp/wp.service';
 
 export class AuthController {
   static async register(req: Request, res: Response) {
-    const user = await AuthService.register(req.body);
+    try {
+      const result = await AuthService.register(req.body);
 
-    // Synchronisation WordPress en arrière-plan (sans bloquer la réponse)
-    WPService.syncRegisteredUserToWP({
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    }).catch(err => console.error('[WP Sync] Erreur lors de l\'inscription :', err));
+      WPService.syncRegisteredUserToWP({
+        email: result.email,
+        firstName: result.firstName,
+        lastName: result.lastName,
+      }).catch(err => console.error('[WP Sync] Erreur lors de l\'inscription :', err));
 
-    res.status(201).json(user);
+      res.status(201).json(result);
+    } catch (err) {
+      if (err instanceof PrismaClientKnownRequestError && err.code === 'P2002') {
+        return res.status(409).json({ message: 'Un compte avec cet email existe déjà.' });
+      }
+      throw err;
+    }
+  }
+
+  static async verifyRegistration2FA(req: Request, res: Response) {
+    const { userId, code } = req.body;
+    if (!userId || !code) {
+      return res.status(400).json({ message: 'userId et code requis.' });
+    }
+    const success = await TwoFactorService.verifyAndEnable(userId, code);
+    if (!success) return res.status(400).json({ message: 'Code invalide.' });
+    res.json({ message: '2FA activée avec succès.' });
   }
 
   static async login(req: Request, res: Response) {

@@ -47,7 +47,11 @@ export class AuthService {
       entityId: user.id,
     });
 
-    return user;
+    // Génération du QR code 2FA directement à l'inscription
+    const { TwoFactorService } = await import('./two-factor.service');
+    const twoFactor = await TwoFactorService.setup(user.id);
+
+    return { ...user, qrCode: twoFactor.qrCode, twoFactorSecret: twoFactor.secret };
   }
 
   static async login(email: string, password: string) {
