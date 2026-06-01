@@ -12,7 +12,7 @@ export interface Client {
   wpId?: string;
   createdAt: string;
   updatedAt: string;
-  mandats?: unknown[];
+  mandats?: { id: string }[];
 }
 
 export interface ClientListResponse {
@@ -30,11 +30,36 @@ export interface DuplicateResult {
 }
 
 export class ClientApi {
-  static async list(params?: { status?: string; limit?: number; page?: number; search?: string }): Promise<ClientListResponse> {
+  static async list(params?: {
+    search?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    source?: 'WP' | 'CRM';
+    hasActiveMandats?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    limit?: number;
+  }): Promise<ClientListResponse> {
     const response = await api.get('/clients', { params });
     const raw = response.data;
-    // API returns { data: [...] } — normalize to { clients: [...] }
     return { ...raw, clients: raw.data ?? raw.clients ?? [] };
+  }
+
+  static async exportCsv(params?: {
+    search?: string;
+    status?: string;
+    source?: 'WP' | 'CRM';
+    hasActiveMandats?: boolean;
+  }): Promise<void> {
+    const response = await api.get('/clients/export', { params, responseType: 'blob' });
+    const url = URL.createObjectURL(new Blob([response.data], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `clients-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   static async getById(id: string): Promise<Client> {

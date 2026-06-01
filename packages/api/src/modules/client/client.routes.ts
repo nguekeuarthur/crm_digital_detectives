@@ -70,6 +70,15 @@ router.post('/check-duplicate', authorize('ADMIN', 'ENQUETEUR'), ClientControlle
 
 /**
  * @openapi
+ * /clients/export:
+ *   get:
+ *     summary: Exporter les clients en CSV (ADMIN seulement)
+ *     tags: [Clients]
+ */
+router.get('/export', authorize('ADMIN'), ClientController.exportCsv);
+
+/**
+ * @openapi
  * /clients/{id}:
  *   get:
  *     summary: Détail d'un client

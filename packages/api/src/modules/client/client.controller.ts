@@ -10,16 +10,36 @@ export class ClientController {
   }
 
   static async list(req: AuthRequest, res: Response) {
-    const { search, status, startDate, endDate, page, limit } = req.query;
+    const { search, status, startDate, endDate, source, hasActiveMandats, sortBy, sortOrder, page, limit } = req.query;
     const result = await ClientService.getClients({
       search: search as string,
       status: status as ClientStatus,
       startDate: startDate as string,
       endDate: endDate as string,
+      source: source as 'WP' | 'CRM',
+      hasActiveMandats: hasActiveMandats === 'true',
+      sortBy: sortBy as string,
+      sortOrder: (sortOrder as 'asc' | 'desc') || 'asc',
       page: page ? parseInt(page as string) : undefined,
-      limit: limit ? parseInt(limit as string) : undefined
+      limit: limit ? parseInt(limit as string) : undefined,
     });
     res.json(result);
+  }
+
+  static async exportCsv(req: AuthRequest, res: Response) {
+    const { search, status, startDate, endDate, source, hasActiveMandats } = req.query;
+    const csv = await ClientService.exportCsv({
+      search: search as string,
+      status: status as ClientStatus,
+      startDate: startDate as string,
+      endDate: endDate as string,
+      source: source as 'WP' | 'CRM',
+      hasActiveMandats: hasActiveMandats === 'true',
+    });
+    const date = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="clients-${date}.csv"`);
+    res.send('﻿' + csv); // BOM UTF-8 pour Excel
   }
 
   static async getById(req: AuthRequest, res: Response) {

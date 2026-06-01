@@ -1,6 +1,6 @@
 import { prisma } from '../../shared/prisma';
 import { AuditService } from '../audit/audit.service';
-import { ClientStatus, Prisma } from '@prisma/client';
+import { ClientStatus, MandateStatus, Prisma } from '@prisma/client';
 import { NotFoundError, ValidationError } from '../../shared/errors';
 import { z } from 'zod';
 import { WPService } from '../wp/wp.service';
@@ -83,27 +83,40 @@ export class ClientService {
     return client;
   }
 
-  static async getClients(filters: { 
-    search?: string; 
-    status?: ClientStatus; 
+  static async getClients(filters: {
+    search?: string;
+    status?: ClientStatus;
     startDate?: string;
     endDate?: string;
-    page?: number; 
-    limit?: number 
+    source?: 'WP' | 'CRM';
+    hasActiveMandats?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    limit?: number;
   }) {
-    const { search, status, startDate, endDate, page = 1, limit = 20 } = filters;
+    const {
+      search, status, startDate, endDate, source, hasActiveMandats,
+      sortBy = 'lastName', sortOrder = 'asc',
+      page = 1, limit = 20,
+    } = filters;
     const skip = (page - 1) * limit;
 
     const where: Prisma.ClientWhereInput = { deletedAt: null };
-    
-    if (status) {
-      where.status = status;
-    }
+
+    if (status) where.status = status;
 
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) where.createdAt.gte = new Date(startDate);
       if (endDate) where.createdAt.lte = new Date(endDate);
+    }
+
+    if (source === 'WP') where.wpId = { not: null };
+    else if (source === 'CRM') where.wpId = null;
+
+    if (hasActiveMandats) {
+      where.mandats = { some: { status: MandateStatus.ACTIVE, deletedAt: null } };
     }
 
     if (search) {
@@ -115,23 +128,55 @@ export class ClientService {
       ];
     }
 
+    const SORT_FIELDS = ['firstName', 'lastName', 'email', 'createdAt', 'status'];
+    const orderBy = SORT_FIELDS.includes(sortBy)
+      ? { [sortBy]: sortOrder }
+      : { lastName: 'asc' as const };
+
     const [clients, total] = await Promise.all([
       prisma.client.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { lastName: 'asc' },
+        orderBy,
+        include: {
+          mandats: {
+            where: { status: MandateStatus.ACTIVE, deletedAt: null },
+            select: { id: true },
+          },
+        },
       }),
-      prisma.client.count({ where })
+      prisma.client.count({ where }),
     ]);
 
-    return { 
-      data: clients, 
-      total, 
-      page, 
-      limit, 
-      totalPages: Math.ceil(total / limit) 
+    return {
+      data: clients,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
+  }
+
+  static async exportCsv(filters: Parameters<typeof ClientService.getClients>[0]) {
+    const { data: clients } = await ClientService.getClients({ ...filters, limit: 10000, page: 1 });
+
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['ID', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Société', 'Statut', 'Source', 'Mandats actifs', 'Date création'];
+    const rows = clients.map(c => [
+      c.id,
+      c.firstName,
+      c.lastName,
+      c.email,
+      c.phone ?? '',
+      c.company ?? '',
+      c.status,
+      c.wpId ? 'WordPress' : 'CRM',
+      (c.mandats as { id: string }[]).length,
+      new Date(c.createdAt).toLocaleDateString('fr-CH'),
+    ].map(esc).join(','));
+
+    return [header.map(esc).join(','), ...rows].join('\r\n');
   }
 
   static async getClientById(id: string) {
