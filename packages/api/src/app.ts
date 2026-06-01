@@ -72,9 +72,10 @@ app.use(morgan('dev'));
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limite chaque IP à 100 requêtes par fenêtre
-  message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Trop de requêtes, veuillez réessayer plus tard.' } }
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 0, // 0 = désactivé en dev
+  message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Trop de requêtes, veuillez réessayer plus tard.' } },
+  skip: () => process.env.NODE_ENV !== 'production',
 });
 app.use('/api/', limiter);
 

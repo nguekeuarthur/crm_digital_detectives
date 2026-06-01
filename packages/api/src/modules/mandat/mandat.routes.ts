@@ -86,7 +86,7 @@ router.get('/:id/activity', authorizeMandat, MandatController.getActivity);
  *     summary: Récupérer tous les fichiers géolocalisés d'un mandat
  *     tags: [Mandates]
  */
-router.get('/:id/geo-files', authorizeMandat, MandatController.getGeoFiles);
+router.get('/:id/geo-files', authorize('ADMIN', 'ENQUETEUR'), MandatController.getGeoFiles);
 
 /**
  * @openapi
