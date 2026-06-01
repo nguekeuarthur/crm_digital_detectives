@@ -9,6 +9,7 @@ import { PlanningPage } from '../../pages/planning/ui/PlanningPage';
 import { SubcontractorsPage } from '../../pages/subcontractors/ui/SubcontractorsPage';
 import { CommunicationsPage } from '../../pages/communications/ui/CommunicationsPage';
 import { DossiersPage } from '../../pages/dossiers/ui/DossiersPage';
+import { ClientDetailPage } from '../../pages/client-detail/ui/ClientDetailPage';
 import { VisionneusePage } from '../../pages/visionneuse/ui/VisionneusePage';
 import { RapportsPage } from '../../pages/rapports/ui/RapportsPage';
 import { DevisPage } from '../../pages/devis/ui/DevisPage';
@@ -65,6 +66,10 @@ const router = createBrowserRouter([
   {
     path: '/clients',
     element: <ProtectedRoute><ClientsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/clients/:id',
+    element: <ProtectedRoute><ClientDetailPage /></ProtectedRoute>,
   },
   {
     path: '/devis',

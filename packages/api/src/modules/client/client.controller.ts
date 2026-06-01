@@ -66,4 +66,15 @@ export class ClientController {
     const result = await ClientService.checkDuplicate(req.body);
     res.json(result);
   }
+
+  static async addNote(req: AuthRequest, res: Response) {
+    const { text } = req.body;
+    const note = await ClientService.addNote(req.params.id as string, text, req.user!.userId);
+    res.status(201).json(note);
+  }
+
+  static async getNotes(req: AuthRequest, res: Response) {
+    const result = await ClientService.getNotes(req.params.id as string);
+    res.json(result);
+  }
 }

@@ -42,19 +42,21 @@ export class AuditService {
   static async getLogs(filters: {
     userId?: string;
     entity?: string;
+    entityId?: string;
     action?: string;
     startDate?: string;
     endDate?: string;
     page?: number;
     limit?: number;
   }) {
-    const { userId, entity, action, startDate, endDate, page = 1, limit = 20 } = filters;
+    const { userId, entity, entityId, action, startDate, endDate, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
     if (userId) where.userId = userId;
     if (entity) where.entity = entity;
+    if (entityId) where.entityId = entityId;
     if (action) where.action = action;
     if (startDate || endDate) {
       where.createdAt = {};

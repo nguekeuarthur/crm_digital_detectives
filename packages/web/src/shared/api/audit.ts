@@ -23,6 +23,7 @@ export class AuditApi {
     page?: number;
     limit?: number;
     entity?: string;
+    entityId?: string;
     action?: string;
     startDate?: string;
     endDate?: string;

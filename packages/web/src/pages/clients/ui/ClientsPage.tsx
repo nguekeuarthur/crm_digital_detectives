@@ -11,6 +11,7 @@ import {
   IconDownload, IconFilter, IconChevronUp, IconChevronDown,
   IconAlertTriangle, IconSelector,
 } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
 import { ClientApi, Client } from '../../../shared/api/client';
 import { StatisticsApi } from '../../../shared/api/statistics';
 import { formatCurrency } from '../../../shared/constants';
@@ -41,6 +42,7 @@ function SortIcon({ field, sortBy, sortOrder }: { field: string; sortBy: string;
 }
 
 export function ClientsPage() {
+  const navigate = useNavigate();
   const token = useAuthStore(s => s.accessToken);
   const isAdmin = getRole(token) === 'ADMIN';
 
@@ -379,7 +381,7 @@ export function ClientsPage() {
                     </Badge>
                   </Table.Td>
                   <Table.Td>
-                    <Button size="xs" variant="light">Détails</Button>
+                    <Button size="xs" variant="light" onClick={() => navigate(`/clients/${client.id}`)}>Détails</Button>
                   </Table.Td>
                 </Table.Tr>
               )) : (

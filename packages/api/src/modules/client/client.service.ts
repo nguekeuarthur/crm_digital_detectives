@@ -249,6 +249,26 @@ export class ClientService {
     });
   }
 
+  static async addNote(clientId: string, text: string, userId: string) {
+    await this.getClientById(clientId); // 404 si inexistant
+    return AuditService.log({
+      userId,
+      action: 'NOTE',
+      entity: 'Client',
+      entityId: clientId,
+      newValue: { text },
+    });
+  }
+
+  static async getNotes(clientId: string) {
+    return AuditService.getLogs({
+      entity: 'Client',
+      entityId: clientId,
+      action: 'NOTE',
+      limit: 100,
+    });
+  }
+
   static async checkDuplicate(data: {
     email?: string;
     phone?: string;

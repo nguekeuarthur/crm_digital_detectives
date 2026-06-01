@@ -81,6 +81,20 @@ export class ClientApi {
     await api.delete(`/clients/${id}`);
   }
 
+  static async getMandates(id: string): Promise<unknown[]> {
+    const response = await api.get(`/clients/${id}/mandates`);
+    return response.data;
+  }
+
+  static async addNote(id: string, text: string): Promise<void> {
+    await api.post(`/clients/${id}/notes`, { text });
+  }
+
+  static async getNotes(id: string): Promise<{ logs: import('./audit').AuditLog[] }> {
+    const response = await api.get(`/clients/${id}/notes`);
+    return response.data;
+  }
+
   static async checkDuplicate(data: {
     email?: string;
     phone?: string;

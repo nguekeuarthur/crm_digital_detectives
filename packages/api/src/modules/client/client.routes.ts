@@ -113,4 +113,17 @@ router.delete('/:id', authorize('ADMIN'), ClientController.delete);
  */
 router.get('/:id/mandates', authorize('ADMIN', 'ENQUETEUR'), ClientController.getMandates);
 
+/**
+ * @openapi
+ * /clients/{id}/notes:
+ *   post:
+ *     summary: Ajouter une note interne au client
+ *     tags: [Clients]
+ *   get:
+ *     summary: Lister les notes internes d'un client
+ *     tags: [Clients]
+ */
+router.post('/:id/notes', authorize('ADMIN', 'ENQUETEUR'), ClientController.addNote);
+router.get('/:id/notes', authorize('ADMIN', 'ENQUETEUR'), ClientController.getNotes);
+
 export { router as clientRoutes };
