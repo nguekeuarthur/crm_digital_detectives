@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../shared/middlewares';
 import { MandatService } from './mandat.service';
-import { MandateStatus, ActivityType } from '@prisma/client';
+import { MandatStatus, ActivityType } from '@prisma/client';
 import { ActivityService } from './activity.service';
 import { DossierService } from './dossier.service';
 import { TimeEntryService } from '../time-entry/time-entry.service';
@@ -21,7 +21,7 @@ export class MandatController {
   static async list(req: AuthRequest, res: Response) {
     const { status, clientId, enqueteurId, page, limit } = req.query;
     const result = await MandatService.getMandates({
-      status: status as MandateStatus,
+      status: status as MandatStatus,
       clientId: clientId as string,
       enqueteurId: enqueteurId as string,
       page: page ? parseInt(page as string) : undefined,

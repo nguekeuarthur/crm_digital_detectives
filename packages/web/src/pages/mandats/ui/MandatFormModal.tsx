@@ -18,9 +18,9 @@ export function MandatFormModal({ opened, onClose, onSuccess }: Props) {
 
   useEffect(() => {
     if (!opened) return;
-    ClientApi.list({ limit: 100 }).then(data => {
+    ClientApi.list({ limit: 100 }).then(res => {
       setClientOptions(
-        (data ?? []).map(c => ({
+        (res.data ?? []).map(c => ({
           value: c.id,
           label: `${c.firstName} ${c.lastName}${c.company ? ` — ${c.company}` : ''}`,
         }))

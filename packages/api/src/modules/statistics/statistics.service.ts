@@ -1,5 +1,5 @@
 import { prisma } from '../../shared/prisma';
-import { MandateStatus } from '@prisma/client';
+import { MandatStatus } from '@prisma/client';
 
 export class StatisticsService {
   // Statistiques principales pour le tableau de bord
@@ -87,7 +87,7 @@ export class StatisticsService {
 
     for (const status of statuses) {
       results[status] = await prisma.mandat.count({
-        where: { status: status as MandateStatus, deletedAt: null }
+        where: { status: status as MandatStatus, deletedAt: null }
       });
     }
 

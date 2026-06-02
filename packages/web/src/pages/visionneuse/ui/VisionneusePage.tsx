@@ -5,7 +5,7 @@ import {
 } from '@mantine/core';
 import {
   IconChevronLeft, IconChevronRight, IconCheck, IconCopy,
-  IconMap, IconArrowLeft,
+  IconMap, IconArrowLeft, IconAlertCircle,
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../features/auth/model/auth.store';

@@ -283,7 +283,7 @@ router.get('/:id/activity', authorizeMandat, MandatController.getActivity);
  *                     type: string
  *                     format: date-time
  */
-router.get('/:id/geo-files', authorize('ADMIN', 'ENQUETEUR'), MandatController.getGeoFiles);
+router.get('/:id/geo-files', authorizeMandat, MandatController.getGeoFiles);
 
 /**
  * @openapi
