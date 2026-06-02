@@ -217,4 +217,36 @@ router.post('/invoices/:id/send-to-client', authorize('ADMIN', 'ENQUETEUR'), Bil
  */
 router.get('/invoices/:id/pdf', authorize('ADMIN', 'ENQUETEUR'), BillingController.downloadInvoicePDF);
 
+/**
+ * @openapi
+ * /billing/invoices/{id}/pay-manual:
+ *   patch:
+ *     summary: Marquer manuellement une facture comme payée
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [paymentDate, bankReference]
+ *             properties:
+ *               paymentDate:
+ *                 type: string
+ *                 format: date-time
+ *               bankReference:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Facture marquée comme payée
+ */
+router.patch('/invoices/:id/pay-manual', authorize('ADMIN', 'ENQUETEUR'), BillingController.markAsPaidManual);
+
 export { router as billingRoutes };

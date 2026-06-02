@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { AuthRequest } from '../../shared/middlewares/authenticate';
 import { TwoFactorService } from './two-factor.service';
 import { WPService } from '../wp/wp.service';
+import { prisma } from '../../shared/prisma';
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -64,5 +65,14 @@ export class AuthController {
     const { refreshToken } = req.body;
     await AuthService.logout(refreshToken);
     res.status(204).send();
+  }
+
+  static async getUsers(req: AuthRequest, res: Response) {
+    const { role } = req.query;
+    const users = await prisma.user.findMany({
+      where: role ? { role: role as 'ADMIN' | 'ENQUETEUR' | 'SOUS_TRAITANT' } : undefined,
+      select: { id: true, firstName: true, lastName: true, email: true, role: true }
+    });
+    res.json(users);
   }
 }

@@ -42,7 +42,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme}>
-        <Notifications position="top-right" />
+        <Notifications 
+          position="top-right"
+          styles={{
+            notification: { overflow: 'visible' },
+            icon: { overflow: 'visible' },
+          }}
+        />
         {children}
       </MantineProvider>
     </QueryClientProvider>

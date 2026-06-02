@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../../shared/prisma';
 import { AuditService } from '../audit/audit.service';
+import { WPService } from '../wp/wp.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 const REFRESH_SECRET = process.env.REFRESH_SECRET || 'superrefreshsecret';
@@ -45,6 +46,10 @@ export class AuthService {
       action: 'REGISTER',
       entity: 'User',
       entityId: user.id,
+    });
+
+    WPService.syncRegisteredUserToWP({ email, firstName, lastName }).catch(err => {
+      console.error('Erreur non attrapée lors de la synchro WP', err);
     });
 
     return user;

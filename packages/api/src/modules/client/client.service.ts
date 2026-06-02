@@ -183,4 +183,40 @@ export class ClientService {
       include: { user: { select: { firstName: true, lastName: true } } }
     });
   }
+
+  static async checkDuplicate(data: {
+    email?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+  }) {
+    const duplicates = [];
+
+    if (data.email) {
+      const byEmail = await prisma.client.findUnique({ where: { email: data.email } });
+      if (byEmail) duplicates.push({ client: byEmail, score: 100, reasons: ['Email identique'] });
+    }
+
+    if (data.phone) {
+      const byPhone = await prisma.client.findFirst({ where: { phone: data.phone } });
+      if (byPhone && !duplicates.some(d => d.client.id === byPhone.id)) {
+        duplicates.push({ client: byPhone, score: 90, reasons: ['Téléphone identique'] });
+      }
+    }
+
+    if (data.firstName && data.lastName) {
+      const byName = await prisma.client.findFirst({ 
+        where: { 
+          firstName: { equals: data.firstName, mode: 'insensitive' },
+          lastName: { equals: data.lastName, mode: 'insensitive' }
+        } 
+      });
+      if (byName && !duplicates.some(d => d.client.id === byName.id)) {
+        duplicates.push({ client: byName, score: 80, reasons: ['Nom et prénom identiques'] });
+      }
+    }
+
+    return { duplicates };
+  }
 }

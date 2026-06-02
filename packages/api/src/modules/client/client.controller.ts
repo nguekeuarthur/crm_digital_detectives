@@ -46,4 +46,9 @@ export class ClientController {
     const activity = await ClientService.getClientActivity(req.params.id as string);
     res.json(activity);
   }
+
+  static async checkDuplicate(req: AuthRequest, res: Response) {
+    const result = await ClientService.checkDuplicate(req.body);
+    res.json(result);
+  }
 }

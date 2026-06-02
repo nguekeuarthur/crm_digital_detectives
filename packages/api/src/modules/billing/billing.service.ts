@@ -143,7 +143,10 @@ export class BillingService {
 
     const updatedInvoice = await prisma.invoice.update({
       where: { id: invoiceId },
-      data: { status: InvoiceStatus.PAID }
+      data: { 
+        status: InvoiceStatus.PAID,
+        paymentDate: new Date()
+      }
     });
 
     // Générer la facture PDF acquittée
@@ -195,6 +198,38 @@ export class BillingService {
       console.error('⚠️ Erreur lors de l\'envoi du reçu par email:', emailErr);
       // Ne pas bloquer le processus si l'email échoue
     }
+
+    return updatedInvoice;
+  }
+
+  /**
+   * Marque une facture client comme payée manuellement (Virement, chèque, etc.)
+   */
+  static async markAsPaidManual(invoiceId: string, paymentDate: Date, bankReference: string, adminId: string) {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: { mandat: true }
+    });
+
+    if (!invoice) throw new Error('Facture introuvable');
+    if (invoice.status === InvoiceStatus.PAID) throw new Error('Facture déjà payée');
+
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { 
+        status: InvoiceStatus.PAID,
+        paymentDate,
+        bankReference
+      }
+    });
+
+    await AuditService.log({
+      userId: adminId,
+      action: 'MARK_INVOICE_PAID_MANUAL',
+      entity: 'Invoice',
+      entityId: invoiceId,
+      newValue: { paymentDate, bankReference }
+    });
 
     return updatedInvoice;
   }
@@ -301,6 +336,9 @@ export class BillingService {
       doc.text(`Mandat : ${invoice.mandat.title}`);
       doc.text(`Référence : ${reference}`);
       doc.text(`Date : ${new Date().toLocaleDateString('fr-FR')}`);
+      if (invoice.dueDate && !isPaid) {
+        doc.text(`Date d'échéance : ${new Date(invoice.dueDate).toLocaleDateString('fr-FR')}`);
+      }
       doc.moveDown(2);
 
       doc.text(isPaid ? 'Montant total payé :' : 'Montant total à régler :', { underline: true });

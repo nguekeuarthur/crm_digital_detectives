@@ -1,6 +1,6 @@
 import { api } from './base';
 
-export type MandatStatus = 'DRAFT' | 'ACTIVE' | 'SUSPENDED' | 'CLOSED';
+export type MandatStatus = 'OUVERT' | 'EN_COURS' | 'EN_ATTENTE_PREUVES' | 'A_VALIDER' | 'TERMINE' | 'ANNULE';
 
 export interface Mandat {
   id: string;
@@ -57,6 +57,16 @@ export class MandatApi {
     status?: MandatStatus;
   }): Promise<Mandat> {
     const response = await api.patch(`/mandates/${id}`, data);
+    return response.data;
+  }
+
+  static async assign(id: string, enqueteurId: string): Promise<Mandat> {
+    const response = await api.post(`/mandates/${id}/assign`, { enqueteurId });
+    return response.data;
+  }
+
+  static async unassign(id: string, userId: string): Promise<Mandat> {
+    const response = await api.delete(`/mandates/${id}/assign/${userId}`);
     return response.data;
   }
 }

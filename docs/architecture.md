@@ -50,3 +50,42 @@ C4Container
     Rel(api, db, "Lit et écrit (Prisma ORM)")
     Rel(api, external, "Appels API / Webhooks")
 ```
+
+## 3. Composants (Niveau 3 - Backend API)
+
+Ce diagramme illustre les composants internes clés de l'API (Backend Node.js/Express) et leurs interactions.
+
+```mermaid
+C4Component
+    title Architecture Composants - API Backend
+
+    Container_Boundary(api, "API (Express.js)") {
+        Component(router, "Routeur Express", "Routes, Middleware (Auth, CORS, Rate Limit)", "Aiguille les requêtes HTTP vers les bons contrôleurs.")
+        Component(auth_controller, "Auth Controller", "Logique d'authentification", "Gère la connexion, les JWT, le 2FA.")
+        Component(crm_controller, "CRM Controllers", "Clients, Mandats, Devis, Factures", "Gère la logique métier du CRM.")
+        Component(webhook_controller, "Webhook Controllers", "Stripe, WP, Ringover", "Écoute les événements externes et met à jour le système.")
+        
+        Component(prisma_client, "Prisma ORM", "Couche d'accès aux données", "Génère les requêtes SQL et gère le schéma de la BDD.")
+        Component(cron_jobs, "Cron Jobs", "node-cron", "Tâches asynchrones (relances, rappels, synchronisations).")
+        Component(email_service, "Email & PDF Service", "Nodemailer, Puppeteer", "Génère les factures PDF et envoie les emails (templates).")
+    }
+
+    ContainerDb(db, "Base de Données", "PostgreSQL", "Schéma : User, Client, Mandat, Invoice, etc.")
+    System_Ext(external, "APIs Tiers", "Stripe, WP, Ringover, Nikon")
+
+    Rel(router, auth_controller, "Aiguille vers", "Appel interne")
+    Rel(router, crm_controller, "Aiguille vers", "Appel interne")
+    Rel(router, webhook_controller, "Aiguille vers", "Appel interne")
+    
+    Rel(auth_controller, prisma_client, "Lit/Écrit", "Appel ORM")
+    Rel(crm_controller, prisma_client, "Lit/Écrit", "Appel ORM")
+    Rel(webhook_controller, prisma_client, "Lit/Écrit", "Appel ORM")
+    
+    Rel(crm_controller, email_service, "Déclenche génération PDF/Emails", "Appel Service")
+    Rel(cron_jobs, prisma_client, "Vérifie les retards", "Appel ORM")
+    Rel(cron_jobs, email_service, "Déclenche relances", "Appel Service")
+    
+    Rel(prisma_client, db, "Requêtes SQL", "TCP/IP")
+    Rel(webhook_controller, external, "Écoute et interagit", "HTTPS")
+    Rel(email_service, external, "SMTP (via Email provider)", "SMTP")
+```

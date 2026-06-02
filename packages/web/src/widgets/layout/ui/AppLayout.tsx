@@ -52,12 +52,14 @@ import {
   IconFolders,
   IconChartBar,
   IconFileInvoice,
-  IconMap
+  IconMap,
+  IconCash
 } from '@tabler/icons-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/api/base';
 import { getAccessToken } from '../../../shared/api/token';
 import { notifications } from '@mantine/notifications';
+import { showLoadingNotif, completeNotif, failNotif } from '../../../shared/lib/successNotification';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -189,6 +191,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // États Facturation & Devis
   const [clientQuotes, setClientQuotes] = useState<any[]>([]);
   const [clientInvoices, setClientInvoices] = useState<any[]>([]);
+
+  // Manual payment states
+  const [manualPaymentInvoiceId, setManualPaymentInvoiceId] = useState<string | null>(null);
+  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [bankReference, setBankReference] = useState<string>('');
   const [newQuoteMandatId, setNewQuoteMandatId] = useState<string>('');
   const [newQuoteLabel, setNewQuoteLabel] = useState<string>('Prestation d\'enquête standard');
   const [newQuotePrice, setNewQuotePrice] = useState<number>(1500);
@@ -204,6 +211,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       return;
     }
     setCreatingQuote(true);
+    const nid = showLoadingNotif('Création', 'Création du devis en cours...');
     try {
       await api.post('/quotes', {
         clientId: clientModalId,
@@ -218,43 +226,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           }
         ]
       });
-      notifications.show({
-        title: 'Succès',
-        message: 'Devis créé avec succès en statut brouillon (DRAFT)',
-        color: 'green'
-      });
+      completeNotif(nid, 'Succès', 'Devis créé avec succès en statut brouillon');
       // Rafraîchir les devis
       const quotesRes = await api.get(`/quotes?clientId=${clientModalId}`);
       setClientQuotes(quotesRes.data || []);
     } catch (err: any) {
       console.error(err);
-      notifications.show({
-        title: 'Erreur',
-        message: 'Impossible de créer le devis. ' + (err.response?.data?.error?.message || err.message),
-        color: 'red'
-      });
+      failNotif(nid, 'Erreur', 'Impossible de créer le devis. ' + (err.response?.data?.error?.message || err.message));
     } finally {
       setCreatingQuote(false);
     }
   };
 
   const handleSendQuote = async (quoteId: string) => {
+    const nid = showLoadingNotif('E-mail', 'Génération du PDF et envoi de l\'e-mail...');
     try {
-      notifications.show({
-        title: 'E-mail',
-        message: 'Génération du PDF et envoi de l\'e-mail...',
-        loading: true,
-        autoClose: false,
-        id: 'send-quote-loading'
-      });
       await api.post(`/quotes/${quoteId}/send`);
-      notifications.update({
-        id: 'send-quote-loading',
-        title: 'Succès',
-        message: 'Le devis PDF a été envoyé au client par e-mail !',
-        color: 'green',
-        autoClose: true
-      });
+      completeNotif(nid, 'Succès', 'Le devis PDF a été envoyé au client par e-mail !');
       // Rafraîchir
       if (clientModalId) {
         const quotesRes = await api.get(`/quotes?clientId=${clientModalId}`);
@@ -262,24 +250,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error(err);
-      notifications.update({
-        id: 'send-quote-loading',
-        title: 'Erreur',
-        message: 'Impossible d\'envoyer le devis. ' + (err.response?.data?.error?.message || err.message),
-        color: 'red',
-        autoClose: true
-      });
+      failNotif(nid, 'Erreur', 'Impossible d\'envoyer le devis. ' + (err.response?.data?.error?.message || err.message));
     }
   };
 
   const handleAcceptQuote = async (quoteId: string) => {
+    const nid = showLoadingNotif('Validation', 'Validation du devis en cours...');
     try {
       await api.patch(`/quotes/${quoteId}/status`, { status: 'ACCEPTED' });
-      notifications.show({
-        title: 'Succès',
-        message: 'Devis accepté ! Une facture PENDING a été générée automatiquement.',
-        color: 'green'
-      });
+      completeNotif(nid, 'Succès', 'Devis accepté ! Une facture PENDING a été générée automatiquement.');
       // Rafraîchir
       if (clientModalId) {
         const [quotesRes, invoicesRes] = await Promise.all([
@@ -291,52 +270,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error(err);
-      notifications.show({
-        title: 'Erreur',
-        message: 'Impossible de valider le devis. ' + (err.response?.data?.error?.message || err.message),
-        color: 'red'
-      });
+      failNotif(nid, 'Erreur', 'Impossible de valider le devis. ' + (err.response?.data?.error?.message || err.message));
     }
   };
 
   const handleSendInvoiceLink = async (invoiceId: string) => {
+    const nid = showLoadingNotif('Envoi en cours', 'Génération de la session Stripe et envoi de l\'e-mail...');
     try {
-      notifications.show({
-        title: 'Envoi en cours',
-        message: 'Génération de la session Stripe et envoi de l\'e-mail...',
-        loading: true,
-        autoClose: false,
-        id: 'send-invoice-loading'
-      });
       await api.post(`/billing/invoices/${invoiceId}/send-to-client`);
-      notifications.update({
-        id: 'send-invoice-loading',
-        title: 'Succès',
-        message: 'Lien de paiement Stripe envoyé au client par e-mail !',
-        color: 'green',
-        autoClose: true
-      });
+      completeNotif(nid, 'Succès', 'Lien de paiement Stripe envoyé au client par e-mail !');
     } catch (err: any) {
       console.error(err);
-      notifications.update({
-        id: 'send-invoice-loading',
-        title: 'Erreur',
-        message: 'Impossible d\'envoyer le lien de paiement. ' + (err.response?.data?.error?.message || err.message),
-        color: 'red',
-        autoClose: true
-      });
+      failNotif(nid, 'Erreur', 'Impossible d\'envoyer le lien de paiement. ' + (err.response?.data?.error?.message || err.message));
     }
   };
 
   const handleSimulateInvoicePayment = async (invoiceId: string) => {
+    const nid = showLoadingNotif('Simulation', 'Simulation du paiement Stripe et déclenchement du webhook...');
     try {
-      notifications.show({
-        title: 'Simulation',
-        message: 'Simulation du paiement Stripe et déclenchement du webhook...',
-        loading: true,
-        autoClose: false,
-        id: 'simulate-payment-loading'
-      });
       await api.post(
         `/webhooks/stripe`,
         {
@@ -353,13 +304,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           }
         }
       );
-      notifications.update({
-        id: 'simulate-payment-loading',
-        title: 'Paiement Confirmé !',
-        message: 'Paiement Stripe reçu. Facture payée et reçu PDF envoyé par e-mail.',
-        color: 'green',
-        autoClose: true
-      });
+      completeNotif(nid, 'Paiement Confirmé !', 'Paiement Stripe reçu. Facture payée et reçu PDF envoyé par e-mail.');
       // Rafraîchir
       if (clientModalId) {
         const invoicesRes = await api.get(`/billing/invoices?clientId=${clientModalId}`);
@@ -367,13 +312,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error(err);
-      notifications.update({
-        id: 'simulate-payment-loading',
-        title: 'Erreur',
-        message: 'Erreur de simulation : ' + (err.response?.data?.error?.message || err.message),
-        color: 'red',
-        autoClose: true
+      failNotif(nid, 'Erreur', 'Erreur de simulation : ' + (err.response?.data?.error?.message || err.message));
+    }
+  };
+
+  const handleManualPayment = async () => {
+    if (!manualPaymentInvoiceId || !paymentDate || !bankReference) return;
+    const nid = showLoadingNotif('Paiement manuel', 'Enregistrement en cours...');
+    try {
+      await api.patch(`/billing/invoices/${manualPaymentInvoiceId}/pay-manual`, {
+        paymentDate: new Date(paymentDate).toISOString(),
+        bankReference
       });
+      completeNotif(nid, 'Succès', 'Facture marquée comme payée !');
+      setManualPaymentInvoiceId(null);
+      setBankReference('');
+      if (clientModalId) {
+        const invoicesRes = await api.get(`/billing/invoices?clientId=${clientModalId}`);
+        setClientInvoices(invoicesRes.data || []);
+      }
+    } catch (err: any) {
+      console.error(err);
+      failNotif(nid, 'Erreur', 'Impossible d\'enregistrer le paiement manuel. ' + (err.response?.data?.error?.message || err.message));
     }
   };
 
@@ -1232,6 +1192,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                             <Table.Th>N° Facture</Table.Th>
                             <Table.Th>Mandat</Table.Th>
                             <Table.Th>Montant TTC</Table.Th>
+                            <Table.Th>Échéance</Table.Th>
                             <Table.Th>Statut</Table.Th>
                             <Table.Th>Actions</Table.Th>
                           </Table.Tr>
@@ -1244,6 +1205,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                 <Text size="sm" lineClamp={1}>{invoice.mandat?.title || 'N/A'}</Text>
                               </Table.Td>
                               <Table.Td>{invoice.amount.toFixed(2)} CHF</Table.Td>
+                              <Table.Td>
+                                {invoice.dueDate ? (
+                                  <Text
+                                    size="sm"
+                                    c={new Date(invoice.dueDate) < new Date() && invoice.status === 'PENDING' ? 'red' : 'dimmed'}
+                                    fw={new Date(invoice.dueDate) < new Date() && invoice.status === 'PENDING' ? 600 : 400}
+                                  >
+                                    {new Date(invoice.dueDate).toLocaleDateString('fr-FR')}
+                                  </Text>
+                                ) : '-'}
+                              </Table.Td>
                               <Table.Td>
                                 <Badge
                                   size="sm"
@@ -1274,6 +1246,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                         onClick={() => handleSimulateInvoicePayment(invoice.id)}
                                       >
                                         Payer (Démo)
+                                      </Button>
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        color="orange"
+                                        leftSection={<IconCash size={14} />}
+                                        onClick={() => setManualPaymentInvoiceId(invoice.id)}
+                                      >
+                                        Saisie Manuelle
                                       </Button>
                                     </>
                                   )}
@@ -1309,6 +1290,45 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </Group>
           </Stack>
         )}
+      </Modal>
+
+      {/* ========================================== */}
+      {/* MODAL : PAIEMENT MANUEL                   */}
+      {/* ========================================== */}
+      <Modal
+        opened={!!manualPaymentInvoiceId}
+        onClose={() => setManualPaymentInvoiceId(null)}
+        title="Saisir un paiement manuel"
+        size="md"
+        radius="md"
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Utilisez ce formulaire pour marquer une facture comme payée suite à la réception d'un virement, d'un chèque ou d'un paiement en espèces.
+          </Text>
+          <TextInput
+            type="date"
+            label="Date de réception du paiement"
+            value={paymentDate}
+            onChange={(e) => setPaymentDate(e.target.value)}
+            required
+          />
+          <TextInput
+            label="Référence bancaire"
+            placeholder="Ex: VIR-123456"
+            value={bankReference}
+            onChange={(e) => setBankReference(e.currentTarget.value)}
+            required
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="light" color="gray" onClick={() => setManualPaymentInvoiceId(null)}>
+              Annuler
+            </Button>
+            <Button color="green" onClick={handleManualPayment} disabled={!paymentDate || !bankReference}>
+              Enregistrer le paiement
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
 
       {/* ========================================== */}

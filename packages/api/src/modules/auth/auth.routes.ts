@@ -174,9 +174,44 @@ router.post('/login-2fa', AuthController.login2FA);
  *                 refreshToken:
  *                   type: string
  *       401:
- *         description: Token invalide ou expiré
+ *     summary: Rafraîchir l'Access Token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Nouveaux tokens
+ *       401:
+ *         description: Refresh token invalide ou expiré
  */
 router.post('/refresh', AuthController.refresh);
+
+/**
+ * @openapi
+ * /auth/users:
+ *   get:
+ *     summary: Lister les utilisateurs (avec filtre optionnel sur le rôle)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Liste des utilisateurs
+ */
+router.get('/users', authenticate, AuthController.getUsers);
 
 /**
  * @openapi

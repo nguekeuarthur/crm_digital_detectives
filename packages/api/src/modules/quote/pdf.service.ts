@@ -120,13 +120,23 @@ export class PDFService {
       let y = tableTop + 30;
       doc.fillColor('#333').fontSize(10);
 
+      const decodeHtml = (str: string) => {
+        if (!str) return '';
+        return str
+          .replace(/&#x27;/g, "'")
+          .replace(/&quot;/g, '"')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>');
+      };
+
       for (const [index, item] of quote.items.entries()) {
         const bgColor = index % 2 === 0 ? '#f9f9f9' : '#fff';
         doc.rect(50, y - 5, 495, 25).fillColor(bgColor).fill();
 
         doc
           .fillColor('#333')
-          .text(item.label, 55, y, { width: 260 })
+          .text(decodeHtml(item.label), 55, y, { width: 260 })
           .text(String(item.quantity), 320, y, { width: 40, align: 'center' })
           .text(`${item.unitPrice.toFixed(2)}`, 365, y, { width: 60, align: 'right' })
           .text(item.discount > 0 ? `${item.discount}%` : '-', 430, y, { width: 40, align: 'center' })

@@ -145,4 +145,16 @@ export class BillingController {
       res.status(400).send(`Webhook Error: ${err.message}`);
     }
   }
+
+  static async markAsPaidManual(req: Request, res: Response) {
+    const { id } = req.params;
+    const { paymentDate, bankReference } = req.body;
+    
+    if (!paymentDate || !bankReference) {
+      throw new ValidationError('La date de paiement et la référence bancaire sont obligatoires');
+    }
+
+    const updated = await BillingService.markAsPaidManual(id, new Date(paymentDate), bankReference, req.user!.id);
+    res.json(updated);
+  }
 }

@@ -448,6 +448,12 @@ model Invoice {
   pdfPath         String?       // Chemin vers le PDF de facture
   stripeSessionId String?       @unique // ID de la Checkout Session Stripe
   paymentIntentId String?       @unique // ID du Payment Intent Stripe (après succès)
+  
+  dueDate         DateTime?     // Date d'échéance de la facture
+  paymentDate     DateTime?     // Date à laquelle le paiement a été reçu
+  bankReference   String?       // Référence bancaire saisie manuellement (ex: Virement)
+  reminderLevel   Int           @default(0) // Niveau de relance (0 = aucune, 1 = J+7, 2 = J+14, 3 = J+30)
+
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

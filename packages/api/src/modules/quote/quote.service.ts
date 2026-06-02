@@ -169,12 +169,16 @@ export class QuoteService {
       });
       
       if (!existingInvoice) {
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30); // J+30 par défaut
+
         await prisma.invoice.create({
           data: {
             quoteId: id,
             mandatId: quote.mandatId,
             amount: quote.totalTTC,
-            status: 'PENDING'
+            status: 'PENDING',
+            dueDate
           }
         });
       }

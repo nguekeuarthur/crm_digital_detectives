@@ -9,6 +9,7 @@ import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import cookieParser from 'cookie-parser';
 import { csrfProtection, xssSanitizer } from './shared/middlewares';
+import { basicAuthAdmin } from './shared/middlewares/basic-auth-admin';
 
 import { authenticate } from './shared/middlewares/authenticate';
 import { authRoutes } from './modules/auth/auth.routes';
@@ -137,8 +138,8 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Documentation (accessible sans auth)
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+// Documentation (accessible uniquement par les ADMIN via Basic Auth)
+app.use('/api/docs', basicAuthAdmin, swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Health Check (accessible sans auth)
 app.get('/health', (_req: Request, res: Response) => {

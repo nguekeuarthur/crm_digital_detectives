@@ -12,17 +12,20 @@ import {
 } from '@tabler/icons-react';
 import { MandatApi, Mandat, MandatStatus } from '../../../shared/api/mandat';
 import { MandatFormModal } from './MandatFormModal';
+import { AssignEnqueteurModal } from './AssignEnqueteurModal';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<MandatStatus, { label: string; color: string; bg: string }> = {
-  DRAFT:     { label: 'Brouillon', color: 'gray',   bg: '#f1f3f5' },
-  ACTIVE:    { label: 'Actif',     color: 'green',  bg: '#ebfbee' },
-  SUSPENDED: { label: 'Suspendu',  color: 'yellow', bg: '#fff9db' },
-  CLOSED:    { label: 'Clôturé',   color: 'blue',   bg: '#e7f5ff' },
+  OUVERT:             { label: 'Ouvert',               color: 'gray',   bg: '#f1f3f5' },
+  EN_COURS:           { label: 'En cours',             color: 'blue',   bg: '#e7f5ff' },
+  EN_ATTENTE_PREUVES: { label: 'En attente preuves',   color: 'yellow', bg: '#fff9db' },
+  A_VALIDER:          { label: 'À valider',            color: 'orange', bg: '#ffe8cc' },
+  TERMINE:            { label: 'Terminé',              color: 'green',  bg: '#ebfbee' },
+  ANNULE:             { label: 'Annulé',               color: 'red',    bg: '#ffe3e3' },
 };
 
-const KANBAN_COLUMNS: MandatStatus[] = ['DRAFT', 'ACTIVE', 'SUSPENDED', 'CLOSED'];
+const KANBAN_COLUMNS: MandatStatus[] = ['OUVERT', 'EN_COURS', 'EN_ATTENTE_PREUVES', 'A_VALIDER', 'TERMINE'];
 
 function daysSince(dateStr: string) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
@@ -151,6 +154,8 @@ export function MandatsPage() {
   const [mandats, setMandats] = useState<Mandat[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
+  const [assignModalOpened, { open: openAssignModal, close: closeAssignModal }] = useDisclosure(false);
+  const [selectedMandatForAssign, setSelectedMandatForAssign] = useState<string | null>(null);
 
   // Vue persistée en localStorage
   const [view, setView] = useState<'list' | 'kanban'>(
@@ -246,6 +251,12 @@ export function MandatsPage() {
   return (
     <Box p="md">
       <MandatFormModal opened={formOpened} onClose={closeForm} onSuccess={fetchMandats} />
+      <AssignEnqueteurModal 
+        opened={assignModalOpened} 
+        onClose={closeAssignModal} 
+        mandatId={selectedMandatForAssign} 
+        onSuccess={fetchMandats} 
+      />
 
       {/* Header */}
       <Group justify="space-between" mb="lg">
@@ -327,14 +338,32 @@ export function MandatsPage() {
                       </Table.Td>
                       <Table.Td>
                         {m.enqueteur ? (
-                          <Group gap="xs">
+                          <Group 
+                            gap="xs" 
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => {
+                              setSelectedMandatForAssign(m.id);
+                              openAssignModal();
+                            }}
+                            title="Changer d'enquêteur"
+                          >
                             <Avatar size={24} radius="xl" color="brand">
                               {initials(m)}
                             </Avatar>
                             <Text size="sm">{m.enqueteur.firstName} {m.enqueteur.lastName}</Text>
                           </Group>
                         ) : (
-                          <Text size="sm" c="dimmed">Non assigné</Text>
+                          <Button 
+                            size="compact-xs" 
+                            variant="light" 
+                            color="gray"
+                            onClick={() => {
+                              setSelectedMandatForAssign(m.id);
+                              openAssignModal();
+                            }}
+                          >
+                            Assigner
+                          </Button>
                         )}
                       </Table.Td>
                       <Table.Td>

@@ -16,7 +16,15 @@ Ce projet utilise une architecture **Monorepo** avec des espaces de travail (Wor
 * **Backend** : Node.js, Express, TypeScript.
 * **Base de données** : PostgreSQL gérée via Prisma ORM.
 
-Pour les décisions d'architecture (ADR) et les diagrammes C4, référez-vous au dossier `/docs`.
+Pour explorer en profondeur le fonctionnement du projet, référez-vous au dossier `/docs` qui contient :
+- [Architecture C4 (Système, Conteneurs, Composants)](./docs/architecture.md)
+- [Modèle de Données (ERD Prisma)](./docs/DATA_MODEL.md)
+- [Intégrations Externes (Stripe, WP, Ringover, Nikon...)](./docs/INTEGRATIONS.md)
+- [Variables d'Environnement](./docs/ENV_VARS.md)
+
+Consultez également les README spécifiques de chaque module :
+- [Backend (API)](./packages/api/README.md)
+- [Frontend (Web)](./packages/web/README.md)
 
 ## 📦 Structure des Dossiers
 
@@ -73,7 +81,7 @@ npm run dev
 
 * Le frontend sera accessible sur : **http://localhost:5173**
 * Le backend (API) sera accessible sur : **http://localhost:3000**
-* La documentation Swagger de l'API sur : **http://localhost:3000/api-docs**
+* La documentation Swagger de l'API sur : **http://localhost:3000/api/docs** (Accès limité aux ADMIN)
 
 ## 🤝 Contribution
 

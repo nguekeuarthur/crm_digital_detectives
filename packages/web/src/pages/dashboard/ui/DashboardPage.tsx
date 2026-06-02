@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Title, Text, Box, Button, Group, Grid, Card, SimpleGrid, Paper, Badge, Table, ScrollArea, Loader, Center } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
+import { useDisclosure } from '@mantine/hooks';
 import { IconLogout, IconSearch, IconPlus, IconTrendingUp, IconUsers, IconCash, IconPercentage } from '@tabler/icons-react';
 import { StatCard } from '../../../widgets/layout/ui/StatCard';
 import { StatisticsApi, DashboardStats } from '../../../shared/api/statistics';
+import { MandatFormModal } from '../../mandats/ui/MandatFormModal';
 
 interface RecentMandate {
   id: string;
@@ -22,6 +24,7 @@ export function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentMandates] = useState<RecentMandate[]>([]);
+  const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -64,7 +67,7 @@ export function DashboardPage() {
 
             <Group>
               <Button leftSection={<IconSearch size={16} />} variant="default">Rechercher</Button>
-              <Button leftSection={<IconPlus size={16} />} color="brand">Nouveau mandat</Button>
+              <Button leftSection={<IconPlus size={16} />} color="brand" onClick={openForm}>Nouveau mandat</Button>
               <Button onClick={handleLogout} variant="outline" color="red" leftSection={<IconLogout size={16} />}>Déconnexion</Button>
             </Group>
           </Group>
@@ -172,6 +175,16 @@ export function DashboardPage() {
           </SimpleGrid>
         </Grid.Col>
       </Grid>
+      
+      <MandatFormModal 
+        opened={formOpened} 
+        onClose={closeForm} 
+        onSuccess={() => {
+          closeForm();
+          // Ideally fetch stats or mandates again here
+          navigate('/mandats');
+        }} 
+      />
     </Box>
   );
 }

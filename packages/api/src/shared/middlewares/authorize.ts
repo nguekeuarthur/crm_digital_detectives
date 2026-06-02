@@ -17,6 +17,7 @@ export const authorize = (...allowedRoles: RoleType[]) => {
     }
 
     if (!allowedRoles.includes(req.user.role as RoleType)) {
+      console.warn(`[Authorize] Accès refusé pour l'utilisateur ${req.user.email}. Rôle: ${req.user.role}, Rôles autorisés: ${allowedRoles.join(', ')}`);
       return res.status(403).json({
         error: {
           code: 'FORBIDDEN',

@@ -6,6 +6,7 @@ import { useAuthStore } from '../../../features/auth/model/auth.store';
 import { ClientApi } from '../../../shared/api/client';
 import { StatisticsApi } from '../../../shared/api/statistics';
 import { formatCurrency } from '../../../shared/constants';
+import { ClientFormModal } from './ClientFormModal';
 
 interface ClientData {
   id: string;
@@ -25,30 +26,33 @@ export function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({ total: 0, revenue: 0, mandateCount: 0 });
 
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [clientsData, revenueData] = await Promise.all([
+        ClientApi.list({ limit: 100 }),
+        StatisticsApi.getRevenueByClient()
+      ]);
+
+      setClients(clientsData.data || []);
+      const totalRevenue = revenueData.reduce((sum, c) => sum + c.estimatedRevenue, 0);
+      const totalMandates = revenueData.reduce((sum, c) => sum + c.mandateCount, 0);
+
+      setStats({
+        total: clientsData.total || 0,
+        revenue: totalRevenue,
+        mandateCount: totalMandates
+      });
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [clientsData, revenueData] = await Promise.all([
-          ClientApi.list({ limit: 100 }),
-          StatisticsApi.getRevenueByClient()
-        ]);
-
-        setClients(clientsData.data || []);
-        const totalRevenue = revenueData.reduce((sum, c) => sum + c.estimatedRevenue, 0);
-        const totalMandates = revenueData.reduce((sum, c) => sum + c.mandateCount, 0);
-
-        setStats({
-          total: clientsData.total || 0,
-          revenue: totalRevenue,
-          mandateCount: totalMandates
-        });
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
@@ -82,7 +86,7 @@ export function ClientsPage() {
             </div>
 
             <Group>
-              <Button leftSection={<IconPlus size={16} />} color="brand">Nouveau client</Button>
+              <Button onClick={() => setIsClientModalOpen(true)} leftSection={<IconPlus size={16} />} color="brand">Nouveau client</Button>
               <Button onClick={handleLogout} variant="outline" color="red" leftSection={<IconLogout size={16} />}>Déconnexion</Button>
             </Group>
           </Group>
@@ -169,6 +173,15 @@ export function ClientsPage() {
           </Card>
         </Grid.Col>
       </Grid>
+      
+      <ClientFormModal 
+        opened={isClientModalOpen} 
+        onClose={() => setIsClientModalOpen(false)} 
+        onSuccess={() => {
+          setIsClientModalOpen(false);
+          fetchData();
+        }} 
+      />
     </Box>
   );
 }
