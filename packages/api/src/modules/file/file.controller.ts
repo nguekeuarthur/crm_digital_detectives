@@ -80,4 +80,15 @@ export class FileController {
     await FileService.deleteFile(req.params.id, req.user!.userId);
     res.status(204).send();
   }
+
+  static async listInFolder(req: AuthRequest, res: Response) {
+    const files = await FileService.getFilesInFolder(req.params.folderId as string);
+    res.json(files);
+  }
+
+  static async rename(req: AuthRequest, res: Response) {
+    const { name } = req.body;
+    const file = await FileService.renameFile(req.params.id as string, name, req.user!.userId);
+    res.json(file);
+  }
 }

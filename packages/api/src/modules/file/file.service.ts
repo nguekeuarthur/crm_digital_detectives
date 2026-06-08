@@ -180,6 +180,29 @@ export class FileService {
     if (!file) throw new ValidationError('Fichier non trouvé');
     return file;
   }
+
+  static async getFilesInFolder(folderId: string) {
+    const folder = await prisma.dossier.findUnique({ where: { id: folderId } });
+    if (!folder) throw new ValidationError('Dossier non trouvé');
+    return prisma.file.findMany({
+      where: { folderId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  static async renameFile(fileId: string, name: string, userId: string) {
+    const file = await this.getById(fileId);
+    const updated = await prisma.file.update({ where: { id: fileId }, data: { name } });
+    await AuditService.log({
+      userId,
+      action: 'RENAME_FILE',
+      entity: 'File',
+      entityId: fileId,
+      oldValue: { name: file.name },
+      newValue: { name },
+    });
+    return updated;
+  }
 }
 
 export function extractMp4Gps(buffer: Buffer): { geoLat: number | null, geoLng: number | null } | null {
