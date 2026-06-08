@@ -141,7 +141,7 @@ export function RapportsPage() {
         ))}
       </SimpleGrid>
 
-      <Grid gutter="md">
+      <Grid>
         {/* Liste des rapports */}
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Card withBorder padding="md" radius="md">

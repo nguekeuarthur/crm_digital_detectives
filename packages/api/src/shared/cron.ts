@@ -29,4 +29,93 @@ export const initCronJobs = () => {
       console.error('❌ [CRON] Erreur lors de la révocation des accès:', error);
     }
   });
+
+  // 3. Purge de rétention et notifications J-7 (Tous les jours à minuit)
+  cron.schedule('0 0 * * *', async () => {
+    console.log('🔒 [CRON] Exécution de la politique de rétention des données...');
+    try {
+      const { RetentionService } = await import('../modules/retention/retention.service');
+      const { ExportService } = await import('../modules/export/export.service');
+      const warningsSent = await RetentionService.sendWarnings();
+      const purgeResult = await RetentionService.runPurge();
+      await ExportService.cleanupExports();
+      console.log(`✅ [CRON] Rétention traitée : ${warningsSent} alertes envoyées, purge :`, purgeResult, 'et exports expirés nettoyés');
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors du traitement de la rétention et nettoyage des exports:', error);
+    }
+  });
+
+  // 4. Synchronisation automatique des e-mails IMAP (Toutes les 5 minutes)
+  cron.schedule('*/5 * * * *', async () => {
+    console.log('📬 [CRON] Synchronisation automatique des e-mails (IMAP)...');
+    try {
+      const { MailSyncService } = await import('../modules/mail/mail-sync.service');
+      await MailSyncService.syncEmails();
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors de la synchronisation automatique des e-mails :', error);
+    }
+  });
+
+  // 5. Worker de file d'attente d'e-mails automatiques (Toutes les 2 minutes)
+  cron.schedule('*/2 * * * *', async () => {
+    try {
+      const { EmailQueueService } = await import('../modules/mail/email-queue.service');
+      const result = await EmailQueueService.processQueue();
+      if (result.processed > 0) {
+        console.log(`📬 [CRON] Queue emails traitée : ${result.sent} envoyé(s), ${result.failed} échoué(s)`);
+      }
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors du traitement de la queue d\'emails :', error);
+    }
+  });
+
+  // 6. Relance des devis SENT depuis 7 jours sans réponse (Tous les jours à 9h)
+  cron.schedule('0 9 * * *', async () => {
+    console.log('📧 [CRON] Vérification des devis en attente de réponse (J+7)...');
+    try {
+      const { PrismaClient, QuoteStatus } = await import('@prisma/client');
+      const prismaInstance = new PrismaClient();
+      const { EmailQueueService } = await import('../modules/mail/email-queue.service');
+
+      // Chercher les devis envoyés il y a exactement 7 jours (±24h)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const eightDaysAgo = new Date();
+      eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+
+      const quotesToRemind = await prismaInstance.quote.findMany({
+        where: {
+          status: QuoteStatus.SENT,
+          sentAt: {
+            gte: eightDaysAgo,
+            lte: sevenDaysAgo,
+          },
+        },
+        include: {
+          client: { select: { email: true, firstName: true, lastName: true } },
+        },
+      });
+
+      for (const quote of quotesToRemind) {
+        if (quote.client?.email) {
+          await EmailQueueService.enqueue('QUOTE_REMINDER_7', quote.client.email, {
+            clientName: `${quote.client.firstName} ${quote.client.lastName}`,
+            quoteRef: quote.reference,
+            totalTTC: quote.totalTTC.toFixed(2),
+            expiresAt: quote.expiresAt
+              ? quote.expiresAt.toLocaleDateString('fr-CH')
+              : 'Non spécifiée',
+          });
+        }
+      }
+
+      if (quotesToRemind.length > 0) {
+        console.log(`✅ [CRON] ${quotesToRemind.length} rappel(s) de devis J+7 ajouté(s) à la queue`);
+      }
+
+      await prismaInstance.$disconnect();
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors de la relance des devis :', error);
+    }
+  });
 };

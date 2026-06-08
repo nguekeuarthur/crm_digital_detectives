@@ -15,7 +15,7 @@ export class SubcontractorController {
 
   static async extend(req: AuthRequest, res: Response) {
     const updated = await SubcontractorService.extendAccess(
-      req.params.id,
+      req.params.id as string,
       req.body.days,
       req.user!.userId
     );

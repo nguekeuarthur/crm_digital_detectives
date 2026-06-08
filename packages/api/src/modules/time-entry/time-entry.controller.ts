@@ -16,7 +16,7 @@ export class TimeEntryController {
   }
 
   static async validate(req: AuthRequest, res: Response) {
-    const entry = await TimeEntryService.validate(req.params.id, req.user!.userId);
+    const entry = await TimeEntryService.validate(req.params.id as string, req.user!.userId);
     res.json(entry);
   }
 }

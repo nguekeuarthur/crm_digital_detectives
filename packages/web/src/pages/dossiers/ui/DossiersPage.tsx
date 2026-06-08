@@ -104,7 +104,7 @@ export function DossiersPage() {
       </SimpleGrid>
 
       {/* Main content */}
-      <Grid gutter="md">
+      <Grid>
         {/* Dossiers par mandat */}
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Card withBorder padding="md" radius="md" h="100%">

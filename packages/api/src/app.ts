@@ -7,6 +7,9 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import cookieParser from 'cookie-parser';
+import { csrfProtection, xssSanitizer } from './shared/middlewares';
+import { basicAuthAdmin } from './shared/middlewares/basic-auth-admin';
 
 import { authenticate } from './shared/middlewares/authenticate';
 import { authRoutes } from './modules/auth/auth.routes';
@@ -18,11 +21,22 @@ import { customFieldRoutes } from './modules/custom-fields/custom-field.routes';
 import { subcontractorRoutes } from './modules/subcontractor/subcontractor.routes';
 import { timeEntryRoutes } from './modules/time-entry/time-entry.routes';
 import { billingRoutes } from './modules/billing/billing.routes';
+import { BillingController } from './modules/billing/billing.controller';
 import { syncRouter, webhookRouter } from './modules/sync/sync.routes';
 import { catalogRouter } from './modules/catalog/catalog.routes';
 import { quoteRouter } from './modules/quote/quote.routes';
+import { adminRoutes } from './modules/admin/admin.routes';
+import { retentionRoutes } from './modules/retention/retention.routes';
+import { ExportController } from './modules/export/export.controller';
 import statisticsRouter from './modules/statistics/statistics.routes';
 import { initCronJobs } from './shared/cron';
+import { mailRoutes } from './modules/mail/mail.routes';
+import { emailTemplateRoutes } from './modules/mail/email-template.routes';
+import { EmailQueueService } from './modules/mail/email-queue.service';
+import { contractRoutes } from './modules/contract/contract.routes';
+import { whatsappPublicRoutes, whatsappProtectedRoutes } from './modules/whatsapp/whatsapp.routes';
+import { ringoverPublicRoutes } from './modules/ringover/ringover.routes';
+import { nikonRoutes } from './modules/nikon/nikon.routes';
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
 // app.use('/api/v1/mandats', mandatRoutes);
@@ -34,6 +48,11 @@ const app = express();
 
 // Initialisation des tâches de fond
 initCronJobs();
+
+// Seed des templates d'e-mails par défaut (si absents)
+EmailQueueService.seedDefaultTemplates().catch(err => {
+  console.error('⚠️ Erreur lors du seed des templates email:', err);
+});
 
 // Configuration Swagger
 const swaggerOptions = {
@@ -64,23 +83,63 @@ const swaggerOptions = {
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
+// Redirection HTTPS en production
+if (process.env.NODE_ENV === 'production') {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(`https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
+
 // Middlewares de sécurité et utilitaires
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+app.use(cookieParser());
+
+// Stripe webhook must be mounted BEFORE express.json() to verify request signatures using the raw body
+app.post('/api/v1/webhooks/stripe', express.raw({ type: 'application/json' }), BillingController.stripeWebhook);
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(xssSanitizer);
+app.use(csrfProtection);
 app.use(morgan('dev'));
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 0, // 0 = désactivé en dev
-  message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Trop de requêtes, veuillez réessayer plus tard.' } },
-  skip: () => process.env.NODE_ENV !== 'production',
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1500, // Sécurisé (contre le DDoS/brute-force) mais suffisamment large pour l'utilisation normale d'un CRM (100 requêtes/minute)
+  message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Trop de requêtes, veuillez réessayer plus tard.' } }
 });
 app.use('/api/', limiter);
 
-// Documentation (accessible sans auth)
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+// Documentation (accessible uniquement par les ADMIN via Basic Auth)
+app.use('/api/docs', basicAuthAdmin, swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Health Check (accessible sans auth)
 app.get('/health', (_req: Request, res: Response) => {
@@ -95,12 +154,18 @@ app.get('/health', (_req: Request, res: Response) => {
 // ─── Routes publiques (pas besoin de token) ───
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/webhooks', webhookRouter); // Webhooks WP → CRM (publiques, sécurisées par secret)
+app.use('/api/v1/webhooks', whatsappPublicRoutes); // Webhook WhatsApp Twilio (public, pas de secret WP)
+app.use('/api/v1/webhooks', ringoverPublicRoutes); // Webhook Ringover CTI (public)
+app.use('/api/v1/nikon', nikonRoutes); // Webhook/Upload Nikon Cloud (public, sécurisé par clé)
+app.get('/api/v1/files/download-export/:id', ExportController.downloadExport);
 
 // ─── Middleware d'authentification global ───
 // Toutes les routes déclarées APRÈS cette ligne sont protégées
 app.use('/api/v1', authenticate);
 
 // ─── Routes protégées (nécessitent un token valide) ───
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/admin', retentionRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/mandates', mandatRoutes);
 app.use('/api/v1/clients', clientRoutes);
@@ -113,6 +178,10 @@ app.use('/api/v1/sync', syncRouter);
 // webhookRouter est monté AVANT authenticate (voir ligne 95)
 app.use('/api/v1/catalog', catalogRouter);
 app.use('/api/v1/quotes', quoteRouter);
+app.use('/api/v1/contracts', contractRoutes);
+app.use('/api/v1/mail', mailRoutes);
+app.use('/api/v1/mail', emailTemplateRoutes);
+app.use('/api/v1/whatsapp', whatsappProtectedRoutes);
 app.use('/api/v1/statistics', statisticsRouter);
 
 // Middleware de gestion d'erreurs global
@@ -125,7 +194,7 @@ app.use((err: Error & { status?: number; code?: string; details?: unknown }, _re
       error: {
         message: 'Erreur de validation des données',
         code: 'VALIDATION_ERROR',
-        details: err.errors.map(e => ({ path: e.path, message: e.message }))
+        details: err.issues.map((e) => ({ path: e.path, message: e.message }))
       }
     });
   }

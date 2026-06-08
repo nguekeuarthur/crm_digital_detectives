@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { ValidationError } from '../../shared/errors';
+import { prisma } from '../../shared/prisma';
 
 export class MailService {
   private static transporter = nodemailer.createTransport({
@@ -16,7 +17,8 @@ export class MailService {
   });
 
   /**
-   * Envoie un email simple
+   * Envoie un email simple avec BCC automatique vers la boîte Digitaldetectives
+   * et enregistre l'email envoyé dans la table Email (direction OUTBOUND)
    */
   static async sendMail(options: {
     to: string;
@@ -25,10 +27,26 @@ export class MailService {
     html?: string;
     attachments?: Array<{
       filename: string;
-      path: string;
+      path?: string;
+      content?: Buffer;
+      contentType?: string;
     }>;
+    // Paramètres optionnels pour l'association client/mandat et le threading
+    clientId?: string;
+    mandatId?: string;
+    inReplyTo?: string;
+    references?: string;
   }) {
     try {
+      // Construire les headers de threading si c'est une réponse
+      const headers: Record<string, string> = {};
+      if (options.inReplyTo) {
+        headers['In-Reply-To'] = options.inReplyTo;
+      }
+      if (options.references) {
+        headers.References = options.references;
+      }
+
       const info = await this.transporter.sendMail({
         from: `Digitaldetectives <${process.env.SMTP_FROM}>`,
         to: options.to,
@@ -36,11 +54,48 @@ export class MailService {
         text: options.text,
         html: options.html,
         attachments: options.attachments,
+        // BCC automatique vers la boîte Digitaldetectives pour synchro bidirectionnelle
+        bcc: process.env.SMTP_USER,
+        headers,
       });
 
       console.log(`✅ Email envoyé : ${info.messageId}`);
+
+      // Enregistrer l'email envoyé en base de données (direction OUTBOUND)
+      try {
+        // Calculer le threadId : si c'est une réponse, chercher le thread existant
+        let threadId: string | null = null;
+        if (options.inReplyTo) {
+          const parentEmail = await prisma.email.findUnique({
+            where: { messageId: options.inReplyTo }
+          });
+          threadId = parentEmail?.threadId || parentEmail?.messageId || options.inReplyTo;
+        }
+
+        await prisma.email.create({
+          data: {
+            messageId: info.messageId,
+            from: `Digitaldetectives <${process.env.SMTP_FROM}>`,
+            to: options.to,
+            subject: options.subject,
+            body: options.html || options.text || '',
+            direction: 'OUTBOUND',
+            receivedAt: new Date(),
+            threadId,
+            inReplyTo: options.inReplyTo || null,
+            references: options.references || null,
+            clientId: options.clientId || null,
+            mandatId: options.mandatId || null,
+          }
+        });
+        console.log(`💾 Email sortant enregistré en base : ${info.messageId}`);
+      } catch (dbErr) {
+        // Ne pas bloquer l'envoi si l'enregistrement en base échoue
+        console.error('⚠️ Erreur lors de l\'enregistrement de l\'email sortant en base :', dbErr);
+      }
+
       return info;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('❌ Erreur lors de l\'envoi de l\'email :', error);
       throw new ValidationError(`Échec de l'envoi de l'email : ${error.message}`);

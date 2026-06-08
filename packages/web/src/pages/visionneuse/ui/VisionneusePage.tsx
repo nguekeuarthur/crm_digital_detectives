@@ -5,7 +5,7 @@ import {
 } from '@mantine/core';
 import {
   IconChevronLeft, IconChevronRight, IconCheck, IconCopy,
-  IconMap, IconArrowLeft,
+  IconMap, IconArrowLeft, IconAlertCircle,
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../features/auth/model/auth.store';
@@ -189,7 +189,7 @@ Coordonnées GPS : ${lat ? lat.toFixed(6) : 'N/A'}, ${lng ? lng.toFixed(6) : 'N/
               <EvidenceMiniMap lat={lat} lng={lng} />
             </Box>
           ) : (
-            <Alert color="yellow" size="xs">Aucune coordonnée GPS disponible.</Alert>
+            <Alert icon={<IconAlertCircle size={16} />} title="Avertissement" color="yellow">Aucune coordonnée GPS disponible.</Alert>
           )}
 
           <Box>

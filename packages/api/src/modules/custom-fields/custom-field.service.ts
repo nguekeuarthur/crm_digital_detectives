@@ -1,5 +1,5 @@
 import { prisma } from '../../shared/prisma';
-import { CustomFieldType, CustomFieldEntity } from '@prisma/client';
+import { CustomFieldType, CustomFieldEntity, Prisma } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 
 export class CustomFieldService {
@@ -17,7 +17,7 @@ export class CustomFieldService {
         name: data.name,
         type: data.type,
         entityType: data.entityType,
-        options: data.options || null
+        options: (data.options ?? null) as Prisma.InputJsonValue
       }
     });
 

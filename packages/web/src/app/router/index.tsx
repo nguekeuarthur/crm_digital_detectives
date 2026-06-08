@@ -1,22 +1,37 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { Box, Center, Image } from '@mantine/core';
-import { LoginPage } from '../../pages/login/ui/LoginPage';
-import { RegisterPage } from '../../pages/register/ui/RegisterPage';
-import { DashboardPage } from '../../pages/dashboard/ui/DashboardPage';
-import { ClientsPage } from '../../pages/clients/ui/ClientsPage';
-import { PlanningPage } from '../../pages/planning/ui/PlanningPage';
-import { SubcontractorsPage } from '../../pages/subcontractors/ui/SubcontractorsPage';
-import { CommunicationsPage } from '../../pages/communications/ui/CommunicationsPage';
-import { DossiersPage } from '../../pages/dossiers/ui/DossiersPage';
-import { ClientDetailPage } from '../../pages/client-detail/ui/ClientDetailPage';
-import { MandatsPage } from '../../pages/mandats/ui/MandatsPage';
-import { VisionneusePage } from '../../pages/visionneuse/ui/VisionneusePage';
-import { RapportsPage } from '../../pages/rapports/ui/RapportsPage';
-import { DevisPage } from '../../pages/devis/ui/DevisPage';
-import { TwoFactorPage } from '../../pages/settings/2fa/ui/TwoFactorPage';
+import React, { useEffect, useState, Suspense } from 'react';
+import { Box, Center, Image, Loader } from '@mantine/core';
 import { AppLayout } from '../../widgets/layout/ui/AppLayout';
 import { useAuthStore } from '../../features/auth/model/auth.store';
+
+// Lazy loading des pages pour réduire la taille initiale du bundle
+const LoginPage = React.lazy(() => import('../../pages/login/ui/LoginPage').then(m => ({ default: m.LoginPage })));
+const RegisterPage = React.lazy(() => import('../../pages/register/ui/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const DashboardPage = React.lazy(() => import('../../pages/dashboard/ui/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const ClientsPage = React.lazy(() => import('../../pages/clients/ui/ClientsPage').then(m => ({ default: m.ClientsPage })));
+const PlanningPage = React.lazy(() => import('../../pages/planning/ui/PlanningPage').then(m => ({ default: m.PlanningPage })));
+const SubcontractorsPage = React.lazy(() => import('../../pages/subcontractors/ui/SubcontractorsPage').then(m => ({ default: m.SubcontractorsPage })));
+const TwoFactorPage = React.lazy(() => import('../../pages/settings/2fa/ui/TwoFactorPage').then(m => ({ default: m.TwoFactorPage })));
+const EmailSettingsPage = React.lazy(() => import('../../pages/settings/emails/ui/EmailSettingsPage').then(m => ({ default: m.EmailSettingsPage })));
+const ContractSettingsPage = React.lazy(() => import('../../pages/settings/contracts/ui/ContractSettingsPage').then(m => ({ default: m.ContractSettingsPage })));
+const StripeSettingsPage = React.lazy(() => import('../../pages/settings/stripe/ui/StripeSettingsPage').then(m => ({ default: m.StripeSettingsPage })));
+const NotFoundPage = React.lazy(() => import('../../pages/error/ui/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
+const MandatsPage = React.lazy(() => import('../../pages/mandats/ui/MandatsPage').then(m => ({ default: m.MandatsPage })));
+const DevisPage = React.lazy(() => import('../../pages/devis/ui/DevisPage').then(m => ({ default: m.DevisPage })));
+const CommunicationsPage = React.lazy(() => import('../../pages/communications/ui/CommunicationsPage').then(m => ({ default: m.CommunicationsPage })));
+const DossiersPage = React.lazy(() => import('../../pages/dossiers/ui/DossiersPage').then(m => ({ default: m.DossiersPage })));
+const VisionneusePage = React.lazy(() => import('../../pages/visionneuse/ui/VisionneusePage').then(m => ({ default: m.VisionneusePage })));
+const RapportsPage = React.lazy(() => import('../../pages/rapports/ui/RapportsPage').then(m => ({ default: m.RapportsPage })));
+
+// Composant de chargement global pour Suspense
+const GlobalLoader = () => (
+  <Center style={{ minHeight: '100vh', background: '#0a0900' }}>
+    <Box style={{ opacity: 0.7, textAlign: 'center' }}>
+      <Image src="/logo-dore.png" alt="Digital Detectives" h={60} fit="contain" mb={20} />
+      <Loader color="yellow" type="dots" />
+    </Box>
+  </Center>
+);
 
 // Protège les routes et restaure la session si un refreshToken existe
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -34,14 +49,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!sessionChecked || isRestoringSession) {
-    // Écran de chargement pendant la restauration de session
-    return (
-      <Center style={{ minHeight: '100vh', background: '#0a0900' }}>
-        <Box style={{ opacity: 0.7 }}>
-          <Image src="/logo-dore.png" alt="Digital Detectives" h={60} fit="contain" />
-        </Box>
-      </Center>
-    );
+    return <GlobalLoader />;
   }
 
   if (!token) {
@@ -69,8 +77,28 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><ClientsPage /></ProtectedRoute>,
   },
   {
-    path: '/clients/:id',
-    element: <ProtectedRoute><ClientDetailPage /></ProtectedRoute>,
+    path: '/planning',
+    element: <ProtectedRoute><PlanningPage /></ProtectedRoute>,
+  },
+  {
+    path: '/subcontractors',
+    element: <ProtectedRoute><SubcontractorsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/settings/2fa',
+    element: <ProtectedRoute><TwoFactorPage /></ProtectedRoute>,
+  },
+  {
+    path: '/settings/emails',
+    element: <ProtectedRoute><EmailSettingsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/settings/contracts',
+    element: <ProtectedRoute><ContractSettingsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/settings/stripe',
+    element: <ProtectedRoute><StripeSettingsPage /></ProtectedRoute>,
   },
   {
     path: '/mandats',
@@ -79,14 +107,6 @@ const router = createBrowserRouter([
   {
     path: '/devis',
     element: <ProtectedRoute><DevisPage /></ProtectedRoute>,
-  },
-  {
-    path: '/planning',
-    element: <ProtectedRoute><PlanningPage /></ProtectedRoute>,
-  },
-  {
-    path: '/subcontractors',
-    element: <ProtectedRoute><SubcontractorsPage /></ProtectedRoute>,
   },
   {
     path: '/communications',
@@ -105,11 +125,15 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><RapportsPage /></ProtectedRoute>,
   },
   {
-    path: '/settings/2fa',
-    element: <ProtectedRoute><TwoFactorPage /></ProtectedRoute>,
-  },
+    path: '*',
+    element: <NotFoundPage />,
+  }
 ]);
 
 export function AppRouter() {
-  return <RouterProvider router={router} />;
+  return (
+    <Suspense fallback={<GlobalLoader />}>
+      <RouterProvider router={router} />
+    </Suspense>
+  );
 }

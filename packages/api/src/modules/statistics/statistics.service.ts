@@ -1,5 +1,5 @@
 import { prisma } from '../../shared/prisma';
-import { MandateStatus } from '@prisma/client';
+import { MandatStatus } from '@prisma/client';
 
 export class StatisticsService {
   // Statistiques principales pour le tableau de bord
@@ -47,7 +47,7 @@ export class StatisticsService {
   static async getUrgentActions() {
     const urgentMandates = await prisma.mandat.findMany({
       where: {
-        status: { in: ['OUVERT', 'EN_ATTENTE'] },
+        status: { in: ['OUVERT', 'EN_ATTENTE_PREUVES'] },
         deletedAt: null
       },
       include: { client: true },
@@ -73,7 +73,7 @@ export class StatisticsService {
 
     return prisma.mandat.count({
       where: {
-        status: 'CLOTURE',
+        status: 'TERMINE',
         updatedAt: { gte: startOfMonth },
         deletedAt: null
       }
@@ -82,12 +82,12 @@ export class StatisticsService {
 
   // Mandats avec statuts détaillés
   static async getMandatesByStatus() {
-    const statuses = ['OUVERT', 'EN_ATTENTE', 'EN_COURS', 'CLOTURE'];
+    const statuses = ['OUVERT', 'EN_ATTENTE_PREUVES', 'EN_COURS', 'TERMINE'];
     const results: Record<string, number> = {};
 
     for (const status of statuses) {
       results[status] = await prisma.mandat.count({
-        where: { status: status as MandateStatus, deletedAt: null }
+        where: { status: status as MandatStatus, deletedAt: null }
       });
     }
 
@@ -188,7 +188,7 @@ export class StatisticsService {
 
   private static async getSuccessRate(): Promise<number> {
     const completed = await prisma.mandat.count({
-      where: { status: 'CLOTURE', deletedAt: null }
+      where: { status: 'TERMINE', deletedAt: null }
     });
 
     const total = await prisma.mandat.count({

@@ -18,10 +18,12 @@ import { AuditApi, AuditLog } from '../../../shared/api/audit';
 const STATUS_COLOR: Record<string, string> = { ACTIF: 'green', PROSPECT: 'blue', INACTIF: 'gray' };
 
 const MANDATE_STATUS: Record<string, { label: string; color: string }> = {
-  DRAFT:     { label: 'Brouillon', color: 'gray' },
-  ACTIVE:    { label: 'Actif',     color: 'green' },
-  SUSPENDED: { label: 'Suspendu',  color: 'yellow' },
-  CLOSED:    { label: 'Clôturé',   color: 'blue' },
+  OUVERT:             { label: 'Ouvert',               color: 'gray' },
+  EN_COURS:           { label: 'En cours',             color: 'blue' },
+  EN_ATTENTE_PREUVES: { label: 'En attente preuves',   color: 'yellow' },
+  A_VALIDER:          { label: 'À valider',            color: 'orange' },
+  TERMINE:            { label: 'Terminé',              color: 'green' },
+  ANNULE:             { label: 'Annulé',               color: 'red' },
 };
 
 const ACTION_LABEL: Record<string, { label: string; icon: typeof IconActivity; color: string }> = {
@@ -266,7 +268,7 @@ export function ClientDetailPage() {
                 </div>
                 <div>
                   <Text size="xs" c="dimmed">Mandats actifs</Text>
-                  <Text size="sm">{mandats.filter(m => m.status === 'ACTIVE').length}</Text>
+                  <Text size="sm">{mandats.filter(m => m.status === 'OUVERT' || m.status === 'EN_COURS').length}</Text>
                 </div>
               </Group>
             </Stack>

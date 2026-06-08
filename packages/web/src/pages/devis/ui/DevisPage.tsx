@@ -95,7 +95,7 @@ export function DevisPage() {
         ))}
       </SimpleGrid>
 
-      <Grid gutter="md">
+      <Grid>
         {/* Liste devis */}
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Card withBorder padding="md" radius="md">

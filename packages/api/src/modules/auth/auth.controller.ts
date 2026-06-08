@@ -1,38 +1,22 @@
 import { Request, Response } from 'express';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { AuthService } from './auth.service';
 import { AuthRequest } from '../../shared/middlewares/authenticate';
 import { TwoFactorService } from './two-factor.service';
 import { WPService } from '../wp/wp.service';
+import { prisma } from '../../shared/prisma';
 
 export class AuthController {
   static async register(req: Request, res: Response) {
-    try {
-      const result = await AuthService.register(req.body);
+    const user = await AuthService.register(req.body);
 
-      WPService.syncRegisteredUserToWP({
-        email: result.email,
-        firstName: result.firstName,
-        lastName: result.lastName,
-      }).catch(err => console.error('[WP Sync] Erreur lors de l\'inscription :', err));
+    // Synchronisation WordPress en arrière-plan (sans bloquer la réponse)
+    WPService.syncRegisteredUserToWP({
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    }).catch(err => console.error('[WP Sync] Erreur lors de l\'inscription :', err));
 
-      res.status(201).json(result);
-    } catch (err) {
-      if (err instanceof PrismaClientKnownRequestError && err.code === 'P2002') {
-        return res.status(409).json({ message: 'Un compte avec cet email existe déjà.' });
-      }
-      throw err;
-    }
-  }
-
-  static async verifyRegistration2FA(req: Request, res: Response) {
-    const { userId, code } = req.body;
-    if (!userId || !code) {
-      return res.status(400).json({ message: 'userId et code requis.' });
-    }
-    const success = await TwoFactorService.verifyAndEnable(userId, code);
-    if (!success) return res.status(400).json({ message: 'Code invalide.' });
-    res.json({ message: '2FA activée avec succès.' });
+    res.status(201).json(user);
   }
 
   static async login(req: Request, res: Response) {
@@ -62,7 +46,7 @@ export class AuthController {
 
   static async disable2FA(req: AuthRequest, res: Response) {
     // Note: On pourrait restreindre à l'admin si besoin
-    await TwoFactorService.disable(req.params.userId || req.user!.userId, req.user!.userId);
+    await TwoFactorService.disable((req.params.userId as string) || req.user!.userId, req.user!.userId);
     res.json({ message: '2FA désactivée' });
   }
 
@@ -81,5 +65,14 @@ export class AuthController {
     const { refreshToken } = req.body;
     await AuthService.logout(refreshToken);
     res.status(204).send();
+  }
+
+  static async getUsers(req: AuthRequest, res: Response) {
+    const { role } = req.query;
+    const users = await prisma.user.findMany({
+      where: role ? { role: role as 'ADMIN' | 'ENQUETEUR' | 'SOUS_TRAITANT' } : undefined,
+      select: { id: true, firstName: true, lastName: true, email: true, role: true }
+    });
+    res.json(users);
   }
 }

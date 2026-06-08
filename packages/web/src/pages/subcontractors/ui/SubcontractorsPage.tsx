@@ -60,7 +60,7 @@ export function SubcontractorsPage() {
 
   return (
     <Box p="md">
-      <Grid gutter="md">
+      <Grid gap="md">
         <Grid.Col span={12}>
           <Group justify="space-between" align="center">
             <div>
@@ -120,7 +120,7 @@ export function SubcontractorsPage() {
                         <td>Enquêteur</td>
                         <td>24</td>
                         <td>168h</td>
-                        <td>{formatCurrency(sub.hourlyRate)}/h</td>
+                        <td>{formatCurrency(sub.hourlyRate || 0)}/h</td>
                         <td><Badge color="green">En mission</Badge></td>
                         <td>
                           <Button size="xs" variant="light">Détails</Button>

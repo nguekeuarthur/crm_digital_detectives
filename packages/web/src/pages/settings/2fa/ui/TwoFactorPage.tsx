@@ -154,7 +154,7 @@ export function TwoFactorPage() {
                         <Box p="xl" style={{ background: 'white', borderRadius: '24px', border: '1px solid var(--mantine-color-gray-2)', boxShadow: 'var(--mantine-shadow-md)' }}>
                           <Image src={setupData.qrCode} w={240} h={240} alt="QR Code 2FA" />
                         </Box>
-                        <Text size="xs" c="dimmed" ta="center" fw={600} tt="uppercase" ls={1}>Code d{"'"}appairage chiffré</Text>
+                        <Text size="xs" c="dimmed" ta="center" fw={600} tt="uppercase" style={{ letterSpacing: '1px' }}>Code d{"'"}appairage chiffré</Text>
                       </Stack>
 
                       <Stack gap="xl" justify="center">

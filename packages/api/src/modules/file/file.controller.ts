@@ -17,7 +17,8 @@ const upload = multer({
       'application/pdf',
       'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'video/mp4', 'video/quicktime', 'video/x-msvideo'
+      'video/mp4', 'video/quicktime', 'video/x-msvideo',
+      'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4'
     ];
     
     if (allowedMimeTypes.includes(file.mimetype)) {
@@ -37,7 +38,7 @@ export class FileController {
       throw new ValidationError('Aucun fichier fourni');
     }
 
-    const { folderId } = req.params;
+    const folderId = req.params.folderId as string;
     
     const file = await FileService.uploadFile({
       name: req.file.originalname,
@@ -52,21 +53,21 @@ export class FileController {
   }
 
   static async download(req: AuthRequest, res: Response) {
-    const result = await FileService.getDownloadUrl(req.params.id, req.user!.userId);
+    const result = await FileService.getDownloadUrl(req.params.id as string, req.user!.userId);
     res.json(result);
   }
 
   static async stream(req: AuthRequest, res: Response) {
-    const buffer = await FileService.getFileBuffer(req.params.id);
-    const file = await FileService.getById(req.params.id);
+    const buffer = await FileService.getFileBuffer(req.params.id as string);
+    const file = await FileService.getById(req.params.id as string);
     
     res.setHeader('Content-Type', file.mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${file.name}"`);
     res.send(buffer);
   }
 
   static async getMetadata(req: AuthRequest, res: Response) {
-    const file = await FileService.getById(req.params.id);
+    const file = await FileService.getById(req.params.id as string);
     res.json({
       exif: file.exifData,
       geo: {
@@ -77,7 +78,7 @@ export class FileController {
   }
 
   static async delete(req: AuthRequest, res: Response) {
-    await FileService.deleteFile(req.params.id, req.user!.userId);
+    await FileService.deleteFile(req.params.id as string, req.user!.userId);
     res.status(204).send();
   }
 

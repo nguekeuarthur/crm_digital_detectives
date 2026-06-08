@@ -146,6 +146,10 @@ export class QuoteService {
   static async updateStatus(id: string, status: QuoteStatus, userId: string) {
     const quote = await this.getQuoteById(id);
 
+    if (quote.status === status) {
+      return quote;
+    }
+
     if (quote.status === 'ACCEPTED' || quote.status === 'REFUSED') {
       throw new ValidationError(`Impossible de modifier un devis ${quote.status}`);
     }
@@ -157,6 +161,28 @@ export class QuoteService {
         sentAt: status === 'SENT' ? new Date() : quote.sentAt
       }
     });
+
+    // Si le devis est accepté, créer automatiquement la facture associée
+    if (status === 'ACCEPTED') {
+      const existingInvoice = await prisma.invoice.findFirst({
+        where: { quoteId: id }
+      });
+      
+      if (!existingInvoice) {
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30); // J+30 par défaut
+
+        await prisma.invoice.create({
+          data: {
+            quoteId: id,
+            mandatId: quote.mandatId,
+            amount: quote.totalTTC,
+            status: 'PENDING',
+            dueDate
+          }
+        });
+      }
+    }
 
     await AuditService.log({
       userId,
