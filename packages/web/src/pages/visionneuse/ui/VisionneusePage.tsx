@@ -274,14 +274,26 @@ function MandateMap({ geoFiles, token, onOpen }: {
         </div>`;
 
       const marker = L.marker([file.geoLat, file.geoLng]).bindPopup(popup);
-      marker.on('popupopen', () => {
-        setTimeout(() => {
-          const btn = document.querySelector(`button[data-fileid="${file.id}"]`) as HTMLButtonElement | null;
-          if (btn) btn.onclick = () => onOpen(file);
-        }, 50);
-      });
       marker.addTo(map);
       group.addLayer(marker);
+    });
+
+    // Use event delegation on the map to handle popup button clicks
+    map.on('popupopen', (e: any) => {
+      const popupNode = e.popup.getElement();
+      if (!popupNode) return;
+      
+      const btn = popupNode.querySelector('button[data-fileid]') as HTMLButtonElement | null;
+      if (btn) {
+        btn.onclick = () => {
+          const fileId = btn.getAttribute('data-fileid');
+          if (!fileId) return;
+          const file = geoFiles.find(f => f.id === fileId);
+          if (file) {
+            onOpen(file);
+          }
+        };
+      }
     });
 
     if (group.getLayers().length > 0) {

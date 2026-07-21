@@ -1502,7 +1502,7 @@ function MandateMap({ token, geoFiles, loading, error }: MandateMapProps) {
 
     geoFiles.forEach(file => {
       if (file.geoLat !== null && file.geoLng !== null) {
-        const isImage = file.name.match(/\.(jpg|jpeg|png|heic|heif)$/i);
+        const isImage = file.name.match(/\.(jpg|jpeg|png|heic|heif|gif|webp)$/i);
         const isVideo = file.name.match(/\.(mp4|mov|webm)$/i);
         // Base API URL
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
@@ -1658,7 +1658,7 @@ function EvidenceViewerContent({ file, geoFiles, token, onSelectFile }: Evidence
     }
   };
 
-  const isImage = file.name.match(/\.(jpg|jpeg|png|heic|heif)$/i);
+  const isImage = file.name.match(/\.(jpg|jpeg|png|heic|heif|gif|webp)$/i);
   const isVideo = file.name.match(/\.(mp4|mov|webm)$/i);
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
   const fileUrl = `${apiUrl}/files/stream/${file.id}?token=${token}`;
