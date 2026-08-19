@@ -23,6 +23,8 @@ const DossiersPage = React.lazy(() => import('../../pages/dossiers/ui/DossiersPa
 const VisionneusePage = React.lazy(() => import('../../pages/visionneuse/ui/VisionneusePage').then(m => ({ default: m.VisionneusePage })));
 const RapportsPage = React.lazy(() => import('../../pages/rapports/ui/RapportsPage').then(m => ({ default: m.RapportsPage })));
 
+const ChatPage = React.lazy(() => import('../../pages/chat/ui/ChatPage').then(m => ({ default: m.ChatPage })));
+
 // Composant de chargement global pour Suspense
 const GlobalLoader = () => (
   <Center style={{ minHeight: '100vh', background: '#0a0900' }}>
@@ -123,6 +125,10 @@ const router = createBrowserRouter([
   {
     path: '/rapports',
     element: <ProtectedRoute><RapportsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/chat',
+    element: <ProtectedRoute><ChatPage /></ProtectedRoute>,
   },
   {
     path: '*',

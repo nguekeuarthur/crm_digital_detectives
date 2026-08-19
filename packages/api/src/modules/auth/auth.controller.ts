@@ -21,7 +21,8 @@ export class AuthController {
 
   static async login(req: Request, res: Response) {
     const { email, password } = req.body;
-    const result = await AuthService.login(email, password);
+    const normalizedEmail = email ? email.trim().toLowerCase() : '';
+    const result = await AuthService.login(normalizedEmail, password);
     res.json(result);
   }
 

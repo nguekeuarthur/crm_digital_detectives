@@ -163,6 +163,8 @@ app.get('/api/v1/files/download-export/:id', ExportController.downloadExport);
 // Toutes les routes déclarées APRÈS cette ligne sont protégées
 app.use('/api/v1', authenticate);
 
+import chatRoutes from './modules/chat/chat.routes';
+
 // ─── Routes protégées (nécessitent un token valide) ───
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/admin', retentionRoutes);
@@ -183,6 +185,7 @@ app.use('/api/v1/mail', mailRoutes);
 app.use('/api/v1/mail', emailTemplateRoutes);
 app.use('/api/v1/whatsapp', whatsappProtectedRoutes);
 app.use('/api/v1/statistics', statisticsRouter);
+app.use('/api/v1/chat', chatRoutes);
 
 // Middleware de gestion d'erreurs global
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
