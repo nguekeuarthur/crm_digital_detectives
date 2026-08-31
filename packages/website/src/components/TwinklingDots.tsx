@@ -16,10 +16,10 @@ export function TwinklingDots() {
   const [dots, setDots] = useState<Dot[]>([]);
 
   useEffect(() => {
-    // Génère 320 à 480 points pour un scintillement doré plus dense
+    // Génère 40 à 60 points (Optimisé pour ne pas laguer)
     const generateDots = () => {
       const newDots: Dot[] = [];
-      const numDots = Math.floor(Math.random() * 160) + 320;
+      const numDots = Math.floor(Math.random() * 20) + 40;
 
       for (let i = 0; i < numDots; i++) {
         newDots.push({
@@ -48,10 +48,8 @@ export function TwinklingDots() {
             top: `${dot.y}%`,
             width: dot.size,
             height: dot.size,
-            opacity: Math.random() * 0.45 + 0.35,
-            boxShadow: `0 0 ${dot.size * 4}px rgba(212, 175, 55, 0.95)`, // Effet de lueur (glow)
-            filter: "blur(0.4px)",
-            mixBlendMode: "screen",
+            opacity: Math.random() * 0.4 + 0.2,
+            boxShadow: `0 0 ${dot.size * 2}px rgba(212, 175, 55, 0.6)`, // Effet de lueur allégé
           }}
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: [0, 1, 0], scale: [0.5, 1.5, 0.5] }}

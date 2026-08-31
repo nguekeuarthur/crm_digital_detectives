@@ -475,6 +475,8 @@ model ChatSession {
   visitorId String       @unique // UUID stocké dans le localStorage du client
   status    ChatStatus   @default(BOT)
   botState  String       @default("WELCOME") // L'étape actuelle dans le scénario
+  collectedData Json?
+  calculatedScore Float?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   messages  ChatMessage[]
