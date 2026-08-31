@@ -1,0 +1,506 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String                @id @default(uuid())
+  email              String                @unique
+  password           String
+  firstName          String
+  lastName           String
+  role               Role                  @default(ENQUETEUR)
+  isTwoFactorEnabled Boolean               @default(false)
+  twoFactorSecret    String?
+  accessExpiresAt    DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  auditLogs          AuditLog[]
+  mandats            Mandat[]              @relation("EnqueteurMandats")
+  activities         Activity[]
+  refreshTokens      RefreshToken[]
+  mandatAssignments  MandatSubcontractor[]
+  timeEntries        TimeEntry[]
+}
+
+model MandatSubcontractor {
+  id              String    @id @default(uuid())
+  mandatId        String
+  subcontractorId String
+  hourlyRate      Float // Taux horaire négocié pour ce mandat
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime  @default(now())
+
+  mandat        Mandat @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+  subcontractor User   @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+
+  @@unique([mandatId, subcontractorId])
+}
+
+model TimeEntry {
+  id              String   @id @default(uuid())
+  subcontractorId String
+  mandatId        String
+  date            DateTime
+  hours           Float
+  description     String?
+  validated       Boolean  @default(false) // Doit être validé par l'Admin
+  invoiced        Boolean  @default(false) // Marqué comme facturé/payé
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subcontractor User   @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  mandat        Mandat @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+}
+
+model SubcontractorInvite {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id        String       @id @default(uuid())
+  email     String       @unique
+  firstName String
+  lastName  String
+  phone     String?
+  address   String?
+  company   String?
+  status    ClientStatus @default(PROSPECT)
+  wpId      String?      @unique
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime? // Pour le soft delete
+  mandats   Mandat[]
+  quotes    Quote[]
+  emails    Email[]
+}
+
+model Mandat {
+  id             String                @id @default(uuid())
+  title          String
+  description    String?
+  status         MandatStatus          @default(OUVERT)
+  clientId       String
+  enqueteurId    String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  deletedAt      DateTime? // Pour le soft delete
+  dossiers       Dossier[]
+  activities     Activity[]
+  client         Client                @relation(fields: [clientId], references: [id])
+  enqueteur      User?                 @relation("EnqueteurMandats", fields: [enqueteurId], references: [id])
+  subcontractors MandatSubcontractor[]
+  timeEntries    TimeEntry[]
+  quotes         Quote[]
+  retentionDays  Int                   @default(30)
+  emails         Email[]
+  contracts      Contract[]
+  invoices       Invoice[]
+}
+
+model Dossier {
+  id        String    @id @default(uuid())
+  name      String
+  mandatId  String
+  parentId  String? // Pour la hiérarchie
+  isSystem  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  mandat    Mandat    @relation(fields: [mandatId], references: [id])
+  parent    Dossier?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children  Dossier[] @relation("FolderHierarchy")
+  files     File[]
+}
+
+model File {
+  id        String     @id @default(uuid())
+  name      String
+  key       String // Chemin relatif dans S3/Swift
+  size      Int
+  mimeType  String
+  folderId  String
+  userId    String?
+  exifData  Json? // Données EXIF brutes
+  geoLat    Float? // Latitude normalisée
+  geoLng    Float? // Longitude normalisée
+  createdAt DateTime   @default(now())
+  deletedAt DateTime? // Pour le soft delete
+  folder    Dossier    @relation(fields: [folderId], references: [id])
+  contracts Contract[]
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Activity {
+  id        String       @id @default(uuid())
+  mandatId  String
+  userId    String
+  type      ActivityType
+  payload   Json?
+  createdAt DateTime     @default(now())
+  mandat    Mandat       @relation(fields: [mandatId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  ENQUETEUR
+  SOUS_TRAITANT
+}
+
+enum MandatStatus {
+  OUVERT
+  EN_COURS
+  EN_ATTENTE_PREUVES
+  A_VALIDER
+  TERMINE
+  ANNULE
+}
+
+enum ClientStatus {
+  PROSPECT
+  ACTIF
+  INACTIF
+}
+
+model CustomFieldDefinition {
+  id         String             @id @default(uuid())
+  name       String
+  type       CustomFieldType
+  options    Json? // Pour les SELECT : ["Option 1", "Option 2"]
+  entityType CustomFieldEntity
+  createdAt  DateTime           @default(now())
+  values     CustomFieldValue[]
+}
+
+model CustomFieldValue {
+  id                String                @id @default(uuid())
+  fieldDefinitionId String
+  entityId          String // ID du Mandat ou du Client
+  entityType        CustomFieldEntity
+  value             String // Toujours stocké en string, casté selon le type
+  definition        CustomFieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([fieldDefinitionId, entityId]) // Une seule valeur par champ par entité
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  SELECT
+}
+
+enum CustomFieldEntity {
+  MANDATE
+  CLIENT
+}
+
+enum ActivityType {
+  FILE_ADDED
+  STATUS_CHANGED
+  EMAIL
+  CALL
+  WHATSAPP
+  NOTE
+  ASSIGNMENT
+  MANDAT_CREATED
+}
+
+model Service {
+  id           String          @id @default(uuid())
+  name         String
+  description  String?
+  unitPrice    Float // Prix unitaire HT (Client)
+  internalCost Float           @default(0) // Coût interne (ex: ce qu'on paie au détective)
+  unit         ServiceUnit     @default(HOUR)
+  category     ServiceCategory @default(SURVEILLANCE)
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  quoteItems   QuoteItem[]
+}
+
+enum ServiceUnit {
+  HOUR
+  DAY
+  FIXED
+  KM
+}
+
+enum ServiceCategory {
+  DIGITAL_INVESTIGATION
+  SURVEILLANCE
+  REPORT
+  LOGISTICS
+  ADMIN
+  OTHER
+}
+
+// ─── Devis (Quotes) ─────────────────────────────────────
+
+model Quote {
+  id         String      @id @default(uuid())
+  reference  String      @unique // Ex: DD-2026-0001
+  mandatId   String
+  clientId   String
+  status     QuoteStatus @default(DRAFT)
+  totalHT    Float       @default(0)
+  totalTTC   Float       @default(0)
+  taxRate    Float       @default(7.7) // TVA suisse par défaut
+  marginRate Float? // Marge calculée automatiquement
+  pdfPath    String? // Chemin du PDF généré (stockage)
+  sentAt     DateTime? // Date d'envoi au client
+  expiresAt  DateTime? // Date d'expiration du devis
+  notes      String? // Notes libres / CGV
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  mandat Mandat      @relation(fields: [mandatId], references: [id])
+  client Client      @relation(fields: [clientId], references: [id])
+  items  QuoteItem[]
+  invoices Invoice[]
+}
+
+model QuoteItem {
+  id          String  @id @default(uuid())
+  quoteId     String
+  serviceId   String?
+  label       String // Libellé (copié depuis Service ou libre)
+  description String?
+  quantity    Float
+  unitPrice   Float // Prix snapshot au moment du devis
+  discount    Float   @default(0) // Remise en %
+  totalHT     Float // quantity * unitPrice * (1 - discount/100)
+
+  quote   Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  service Service? @relation(fields: [serviceId], references: [id])
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REFUSED
+  EXPIRED
+}
+
+model DataRetentionPolicy {
+  id            String   @id @default(uuid())
+  entityType    String // "MANDATE" | "CLIENT"
+  triggerEvent  String // "MANDATE_CLOSED" | "CLIENT_INACTIVE"
+  retentionDays Int // Ex: 30, 60, 90
+  action        String // "DELETE" | "ANONYMIZE"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([entityType, triggerEvent])
+}
+
+model Email {
+  id         String   @id @default(uuid())
+  messageId  String   @unique
+  from       String
+  to         String
+  subject    String
+  body       String // Corps HTML ou texte de l'e-mail
+  direction  String   @default("INBOUND") // INBOUND = reçu, OUTBOUND = envoyé
+  createdAt  DateTime @default(now())
+  receivedAt DateTime // Date d'envoi/réception réelle de l'e-mail
+
+  // Threading / Fil de conversation (RFC 2822)
+  threadId   String? // ID du fil (= messageId du premier email du thread)
+  inReplyTo  String? // Message-ID de l'email auquel on répond
+  references String? // Liste des Message-IDs de la chaîne de réponses
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  mandatId String?
+  mandat   Mandat? @relation(fields: [mandatId], references: [id], onDelete: SetNull)
+
+  @@index([threadId])
+}
+
+model EmailTemplate {
+  id        String         @id @default(uuid())
+  code      String         @unique // ex: MANDAT_CREATED, MANDAT_CLOSED, QUOTE_REMINDER_7
+  name      String // Nom lisible pour l'admin
+  subject   String // Sujet de l'e-mail (Handlebars supporté)
+  htmlBody  String // Corps de l'e-mail au format HTML (Handlebars supporté)
+  variables Json? // Description des variables attendues (pour affichage frontend)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  logs      AutoEmailLog[]
+}
+
+model AutoEmailLog {
+  id             String          @id @default(uuid())
+  templateId     String
+  recipientEmail String
+  status         AutoEmailStatus @default(PENDING)
+  errorReason    String?
+  sentAt         DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  template EmailTemplate @relation(fields: [templateId], references: [id])
+}
+
+enum AutoEmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ─── File d'attente d'e-mails (PostgreSQL Queue) ─────────────────────
+// Remplace Bull + Redis pour simplifier l'hébergement (pas de serveur Redis requis)
+
+model EmailJob {
+  id             String         @id @default(uuid())
+  templateCode   String // Code du template (ex: MANDAT_CREATED)
+  recipientEmail String // Adresse email du destinataire
+  payload        Json // Variables Handlebars (ex: { clientName: "Jean" })
+  status         EmailJobStatus @default(PENDING)
+  attempts       Int            @default(0)
+  maxAttempts    Int            @default(3)
+  errorReason    String?
+  scheduledAt    DateTime       @default(now()) // Quand l'email doit être envoyé
+  processedAt    DateTime? // Date de traitement effectif
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status, scheduledAt]) // Index pour la requête du worker
+}
+
+enum EmailJobStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+// ─── Module de Contrats (Génération Dynamique) ─────────────────────────
+
+model ContractTemplate {
+  id          String   @id @default(uuid())
+  name        String // Nom du modèle (ex: "Contrat de filature standard")
+  htmlContent String // Code HTML avec variables {{client.firstName}}, etc.
+  variables   Json? // Métadonnées sur les variables requises (ex: ["client.firstName", "mandat.title"])
+  version     Int      @default(1) // Versionnement
+  isArchived  Boolean  @default(false) // Si true, ne peut plus être sélectionné pour de nouveaux contrats
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contracts Contract[]
+}
+
+model Contract {
+  id          String   @id @default(uuid())
+  mandatId    String
+  templateId  String
+  fileId      String // Lien vers le fichier PDF stocké dans le modèle File existant
+  generatedAt DateTime @default(now())
+
+  mandat   Mandat           @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+  template ContractTemplate @relation(fields: [templateId], references: [id])
+  file     File             @relation(fields: [fileId], references: [id])
+}
+
+// ─── Facturation et Paiements (Stripe) ─────────────────────────────────
+
+model Invoice {
+  id              String        @id @default(uuid())
+  quoteId         String?
+  mandatId        String
+  amount          Float
+  status          InvoiceStatus @default(PENDING)
+  pdfPath         String?       // Chemin vers le PDF de facture
+  stripeSessionId String?       @unique // ID de la Checkout Session Stripe
+  paymentIntentId String?       @unique // ID du Payment Intent Stripe (après succès)
+  
+  dueDate         DateTime?     // Date d'échéance de la facture
+  paymentDate     DateTime?     // Date à laquelle le paiement a été reçu
+  bankReference   String?       // Référence bancaire saisie manuellement (ex: Virement)
+  reminderLevel   Int           @default(0) // Niveau de relance (0 = aucune, 1 = J+7, 2 = J+14, 3 = J+30)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  quote  Quote? @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  mandat Mandat @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
+}
+
+// ─── Live Chat (Chatbot & CRM) ─────────────────────────────────────────
+
+model ChatSession {
+  id        String       @id @default(uuid())
+  visitorId String       @unique // UUID stocké dans le localStorage du client
+  status    ChatStatus   @default(BOT)
+  botState  String       @default("WELCOME") // L'étape actuelle dans le scénario
+  collectedData Json?
+  calculatedScore Float?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  messages  ChatMessage[]
+}
+
+enum ChatStatus {
+  BOT
+  HUMAN
+  CLOSED
+}
+
+model ChatMessage {
+  id        String       @id @default(uuid())
+  sessionId String
+  sender    MessageSender
+  text      String
+  createdAt DateTime     @default(now())
+
+  session   ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+enum MessageSender {
+  USER
+  AGENT
+  BOT
+  SYSTEM
+}

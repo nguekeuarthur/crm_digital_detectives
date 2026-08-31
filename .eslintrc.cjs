@@ -16,7 +16,15 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['packages/web/**/*.{js,jsx}'],
+      files: ['**/*.ts', '**/*.tsx'],
+      parser: '@typescript-eslint/parser',
+      extends: [
+        'plugin:@typescript-eslint/recommended',
+        'prettier'
+      ]
+    },
+    {
+      files: ['packages/web/**/*.{js,jsx,ts,tsx}'],
       env: {
         browser: true,
         node: false
