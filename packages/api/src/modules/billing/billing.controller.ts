@@ -1,8 +1,14 @@
 import { Response, Request } from 'express';
 import { AuthRequest } from '../../shared/middlewares/authenticate';
+import { ValidationError } from '../../shared/errors';
 import { BillingService } from './billing.service';
 import { StripeService } from './stripe.service';
 import { prisma } from '../../shared/prisma';
+
+/** Message lisible d'une erreur attrapée, quelle que soit sa forme */
+function messageErreur(erreur: unknown): string {
+  return erreur instanceof Error ? erreur.message : String(erreur);
+}
 
 export class BillingController {
   static async getSummary(req: AuthRequest, res: Response) {
@@ -50,9 +56,9 @@ export class BillingController {
         orderBy: { createdAt: 'desc' }
       });
       res.json(invoices);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error listing invoices:', error);
-      res.status(500).json({ error: { message: error.message } });
+      res.status(500).json({ error: { message: messageErreur(error) } });
     }
   }
 
@@ -64,9 +70,9 @@ export class BillingController {
     try {
       const session = await StripeService.createCheckoutSession(id);
       res.json({ url: session.url });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating payment link:', error);
-      res.status(500).json({ error: { message: error.message } });
+      res.status(500).json({ error: { message: messageErreur(error) } });
     }
   }
 
@@ -84,9 +90,9 @@ export class BillingController {
         url: result.url,
         emailSent: result.emailSent 
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending payment link to client:', error);
-      res.status(500).json({ error: { message: error.message } });
+      res.status(500).json({ error: { message: messageErreur(error) } });
     }
   }
 
@@ -108,9 +114,9 @@ export class BillingController {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename=facture_${id.substring(0, 8)}.pdf`);
       res.send(pdfBuffer);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error downloading invoice PDF:', error);
-      res.status(500).json({ error: { message: error.message } });
+      res.status(500).json({ error: { message: messageErreur(error) } });
     }
   }
 
@@ -118,7 +124,7 @@ export class BillingController {
     // Note: req.body MUST be a Buffer here (handled by express.raw in routes)
     const isMock = req.headers['x-mock-webhook'] === 'true' && process.env.NODE_ENV === 'development';
     
-    let event: any;
+    let event: { type: string; data: { object: unknown } };
     try {
       if (isMock) {
         console.log('[Stripe Webhook] Simulating mock event bypass');
@@ -130,7 +136,7 @@ export class BillingController {
       }
 
       if (event.type === 'checkout.session.completed') {
-        const session = event.data.object as any;
+        const session = event.data.object as { metadata?: { invoiceId?: string }; client_reference_id?: string };
         const invoiceId = session.metadata?.invoiceId || session.client_reference_id;
 
         if (invoiceId) {
@@ -140,21 +146,21 @@ export class BillingController {
       }
       
       res.status(200).send('Webhook handled');
-    } catch (err: any) {
-      console.error(`Webhook Error: ${err.message}`);
-      res.status(400).send(`Webhook Error: ${err.message}`);
+    } catch (err: unknown) {
+      console.error(`Webhook Error: ${messageErreur(err)}`);
+      res.status(400).send(`Webhook Error: ${messageErreur(err)}`);
     }
   }
 
-  static async markAsPaidManual(req: Request, res: Response) {
-    const { id } = req.params;
+  static async markAsPaidManual(req: AuthRequest, res: Response) {
+    const id = req.params.id as string;
     const { paymentDate, bankReference } = req.body;
-    
+
     if (!paymentDate || !bankReference) {
       throw new ValidationError('La date de paiement et la référence bancaire sont obligatoires');
     }
 
-    const updated = await BillingService.markAsPaidManual(id, new Date(paymentDate), bankReference, req.user!.id);
+    const updated = await BillingService.markAsPaidManual(id, new Date(paymentDate), bankReference, req.user!.userId);
     res.json(updated);
   }
 }

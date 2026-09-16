@@ -20,7 +20,7 @@ export const getSessions = async (req: Request, res: Response) => {
 };
 
 export const getSessionMessages = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   try {
     const session = await prisma.chatSession.findUnique({
       where: { id },

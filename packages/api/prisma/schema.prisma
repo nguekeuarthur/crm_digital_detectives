@@ -25,6 +25,7 @@ model User {
   refreshTokens      RefreshToken[]
   mandatAssignments  MandatSubcontractor[]
   timeEntries        TimeEntry[]
+  bankMatches        BankTransaction[]     @relation("BankTxMatchedBy")
 }
 
 model MandatSubcontractor {
@@ -286,9 +287,9 @@ model Quote {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  mandat Mandat      @relation(fields: [mandatId], references: [id])
-  client Client      @relation(fields: [clientId], references: [id])
-  items  QuoteItem[]
+  mandat   Mandat      @relation(fields: [mandatId], references: [id])
+  client   Client      @relation(fields: [clientId], references: [id])
+  items    QuoteItem[]
   invoices Invoice[]
 }
 
@@ -445,20 +446,22 @@ model Invoice {
   mandatId        String
   amount          Float
   status          InvoiceStatus @default(PENDING)
-  pdfPath         String?       // Chemin vers le PDF de facture
+  pdfPath         String? // Chemin vers le PDF de facture
   stripeSessionId String?       @unique // ID de la Checkout Session Stripe
   paymentIntentId String?       @unique // ID du Payment Intent Stripe (après succès)
-  
-  dueDate         DateTime?     // Date d'échéance de la facture
-  paymentDate     DateTime?     // Date à laquelle le paiement a été reçu
-  bankReference   String?       // Référence bancaire saisie manuellement (ex: Virement)
-  reminderLevel   Int           @default(0) // Niveau de relance (0 = aucune, 1 = J+7, 2 = J+14, 3 = J+30)
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  dueDate          DateTime? // Date d'échéance de la facture
+  paymentDate      DateTime? // Date à laquelle le paiement a été reçu
+  bankReference    String? // Référence bancaire saisie manuellement (ex: Virement)
+  paymentReference String?   @unique // Référence QR suisse (27 chiffres) imprimée sur la facture
+  reminderLevel    Int       @default(0) // Niveau de relance (0 = aucune, 1 = J+7, 2 = J+14, 3 = J+30)
 
-  quote  Quote? @relation(fields: [quoteId], references: [id], onDelete: SetNull)
-  mandat Mandat @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quote            Quote?            @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  mandat           Mandat            @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+  bankTransactions BankTransaction[]
 }
 
 enum InvoiceStatus {
@@ -471,15 +474,15 @@ enum InvoiceStatus {
 // ─── Live Chat (Chatbot & CRM) ─────────────────────────────────────────
 
 model ChatSession {
-  id        String       @id @default(uuid())
-  visitorId String       @unique // UUID stocké dans le localStorage du client
-  status    ChatStatus   @default(BOT)
-  botState  String       @default("WELCOME") // L'étape actuelle dans le scénario
-  collectedData Json?
+  id              String        @id @default(uuid())
+  visitorId       String        @unique // UUID stocké dans le localStorage du client
+  status          ChatStatus    @default(BOT)
+  botState        String        @default("WELCOME") // L'étape actuelle dans le scénario
+  collectedData   Json?
   calculatedScore Float?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  messages  ChatMessage[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  messages        ChatMessage[]
 }
 
 enum ChatStatus {
@@ -489,13 +492,13 @@ enum ChatStatus {
 }
 
 model ChatMessage {
-  id        String       @id @default(uuid())
+  id        String        @id @default(uuid())
   sessionId String
   sender    MessageSender
   text      String
-  createdAt DateTime     @default(now())
+  createdAt DateTime      @default(now())
 
-  session   ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 enum MessageSender {
@@ -503,4 +506,109 @@ enum MessageSender {
   AGENT
   BOT
   SYSTEM
+}
+
+// ─── Connexion bancaire en lecture seule (UBS via bLink / camt.053) ────
+
+/// Compte bancaire suivi par le CRM (lecture seule, aucune écriture n'est
+/// jamais émise vers la banque).
+model BankAccount {
+  id                String       @id @default(uuid())
+  iban              String       @unique
+  label             String // Ex: "UBS – Compte courant CHF"
+  currency          String       @default("CHF")
+  provider          BankProvider @default(CAMT_FILE)
+  providerAccountId String? // resourceId du compte côté bLink
+  isActive          Boolean      @default(true)
+  lastSyncAt        DateTime?
+  lastSyncStatus    String? // Résumé de la dernière synchronisation
+  connectionId      String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  connection   BankConnection?   @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  transactions BankTransaction[]
+}
+
+/// Consentement + jetons OAuth2 d'accès à l'API bancaire (chiffrés AES-256).
+/// Le scope est volontairement limité à la consultation (AIS).
+model BankConnection {
+  id              String        @id @default(uuid())
+  provider        BankProvider  @default(UBS_BLINK)
+  providerId      String? // provider_id bLink de la banque (UBS)
+  oauthClientId   String? // client_id bLink du CRM
+  scope           String        @default("urn:blink:xs2a:ais")
+  accessToken     String? // Chiffré (AES-256-CBC)
+  refreshToken    String? // Chiffré (AES-256-CBC)
+  expiresAt       DateTime?
+  consentStatus   ConsentStatus @default(PENDING)
+  consentSignedAt DateTime?
+  lastError       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  accounts BankAccount[]
+}
+
+/// Écriture bancaire importée. Une écriture n'est jamais modifiée côté banque :
+/// seules les colonnes de rapprochement (status, matched*) évoluent dans le CRM.
+model BankTransaction {
+  id             String      @id @default(uuid())
+  bankAccountId  String
+  externalId     String // AcctSvcrRef / entryReference fourni par la banque
+  bookingDate    DateTime
+  valueDate      DateTime?
+  amount         Float // Toujours positif : le sens est porté par creditDebit
+  currency       String      @default("CHF")
+  creditDebit    CreditDebit @default(CRDT)
+  remittanceInfo String? // Libellé non structuré (communication du payeur)
+  structuredRef  String? // Référence structurée QR / ISR / SCOR
+  endToEndId     String?
+  debtorName     String? // Nom du donneur d'ordre
+  debtorIban     String?
+  raw            Json? // Payload normalisé d'origine (traçabilité)
+
+  status           BankTxStatus @default(UNMATCHED)
+  matchedInvoiceId String?
+  matchScore       Float? // Score de confiance du rapprochement (0 → 1)
+  matchMethod      String? // QR_REFERENCE, REFERENCE_IN_TEXT, AMOUNT_AND_NAME…
+  matchedAt        DateTime?
+  matchedById      String? // null = rapprochement automatique (cron)
+  suggestions      Json? // Candidats proposés à l'opérateur
+  ignoredReason    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bankAccount    BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  matchedInvoice Invoice?    @relation(fields: [matchedInvoiceId], references: [id], onDelete: SetNull)
+  matchedBy      User?       @relation("BankTxMatchedBy", fields: [matchedById], references: [id], onDelete: SetNull)
+
+  @@unique([bankAccountId, externalId])
+  @@index([status, bookingDate])
+}
+
+enum BankProvider {
+  UBS_BLINK // API bancaire UBS via la plate-forme SIX bLink
+  CAMT_FILE // Import de fichiers camt.053 exportés depuis l'E-Banking
+  MOCK // Jeu de données de démonstration (développement)
+}
+
+enum ConsentStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum BankTxStatus {
+  UNMATCHED // Aucun candidat crédible : file d'attente de vérification manuelle
+  SUGGESTED // Candidats proposés, en attente de validation humaine
+  MATCHED // Rapprochée avec une facture
+  IGNORED // Écartée manuellement (frais bancaires, virement interne…)
+}
+
+enum CreditDebit {
+  CRDT
+  DBIT
 }

@@ -4,7 +4,22 @@ import { ValidationError } from '../../shared/errors';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
 import { StripeService } from './stripe.service';
+import { ensureInvoicePaymentReference } from '../banking/payment-reference.service';
+import { formatQrReference } from '../banking/qr-reference';
 import PDFDocument from 'pdfkit';
+
+/** Ce que la facture doit porter pour être mise en page (facture Prisma + relations chargées) */
+interface InvoicePourPDF {
+  id: string;
+  amount: number;
+  dueDate?: Date | string | null;
+  paymentReference?: string | null;
+  quote?: { reference: string } | null;
+  mandat: {
+    title: string;
+    client: { firstName: string; lastName: string };
+  };
+}
 
 export class BillingService {
   /**
@@ -242,6 +257,11 @@ export class BillingService {
     // Générer le lien de paiement Stripe
     const { url } = await StripeService.createCheckoutSession(invoiceId);
 
+    // Attribuer la référence de paiement suisse AVANT de charger la facture :
+    // c'est elle qui, imprimée sur le document, permettra à la banque de la
+    // restituer dans le camt.053 et au CRM de rapprocher le virement.
+    await ensureInvoicePaymentReference(invoiceId);
+
     // Récupérer les infos de la facture avec le client
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
@@ -279,6 +299,10 @@ export class BillingService {
           <td style="padding: 8px 0; color: #666;">Mandat</td>
           <td style="padding: 8px 0; text-align: right;">${invoice.mandat.title}</td>
         </tr>
+        ${invoice.paymentReference ? `<tr>
+          <td style="padding: 8px 0; color: #666;">Référence de paiement</td>
+          <td style="padding: 8px 0; text-align: right; font-family: monospace;">${formatQrReference(invoice.paymentReference)}</td>
+        </tr>` : ''}
         <tr style="border-top: 2px solid #dee2e6;">
           <td style="padding: 12px 0; font-weight: bold; font-size: 16px;">Montant total</td>
           <td style="padding: 12px 0; text-align: right; font-weight: bold; font-size: 18px; color: #1a1a2e;">${invoice.amount.toFixed(2)} CHF</td>
@@ -289,6 +313,7 @@ export class BillingService {
       <a href="${url}" style="display: inline-block; background: linear-gradient(135deg, #635bff 0%, #4f46e5 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: bold;">💳 Payer maintenant</a>
     </div>
     <p style="font-size: 13px; color: #666; text-align: center;">Vous serez redirigé vers la plateforme sécurisée Stripe pour effectuer le paiement par carte bancaire.</p>
+    ${invoice.paymentReference ? `<p style="font-size: 13px; color: #666; text-align: center;">Vous pouvez également régler par virement bancaire${process.env.COMPANY_IBAN ? ` sur l'IBAN <strong>${process.env.COMPANY_IBAN}</strong>` : ''}, en reportant la référence de paiement ci-dessus sans la modifier.</p>` : ''}
     <br/>
     <p>Cordialement,</p>
     <p><strong>L'équipe Digitaldetectives</strong></p>
@@ -315,7 +340,7 @@ export class BillingService {
   /**
    * Génère la facture officielle pour un client
    */
-  static async generateClientInvoicePDF(invoice: any, isPaid: boolean = true): Promise<Buffer> {
+  static async generateClientInvoicePDF(invoice: InvoicePourPDF, isPaid: boolean = true): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
       const buffers: Buffer[] = [];
@@ -345,7 +370,24 @@ export class BillingService {
       doc.fontSize(16)
          .fillColor(isPaid ? '#2f9e44' : '#e03131')
          .text(`${invoice.amount.toFixed(2)} CHF`);
-      
+
+      // Coordonnées de virement : la référence de paiement est le signal qui
+      // rend le rapprochement bancaire automatique fiable (cf. ADR-004).
+      if (!isPaid && invoice.paymentReference) {
+        doc.moveDown(2);
+        doc.fontSize(12).fillColor('#1a1a2e').text('Paiement par virement bancaire', { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(11).fillColor('#333');
+        doc.text(`Bénéficiaire : ${process.env.COMPANY_NAME || 'Digitaldetectives'}`);
+        if (process.env.COMPANY_IBAN) {
+          doc.text(`IBAN : ${process.env.COMPANY_IBAN}`);
+        }
+        doc.text(`Référence de paiement : ${formatQrReference(invoice.paymentReference)}`);
+        doc.fontSize(9).fillColor('#666')
+           .text("Merci de reporter cette référence sans la modifier : elle permet l'affectation automatique de votre paiement.");
+        doc.fillColor('#333');
+      }
+
       doc.moveDown(4);
       doc.fontSize(10).text('Merci pour votre confiance.', { align: 'center' });
 

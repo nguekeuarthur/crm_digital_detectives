@@ -18,6 +18,9 @@ const StripeSettingsPage = React.lazy(() => import('../../pages/settings/stripe/
 const NotFoundPage = React.lazy(() => import('../../pages/error/ui/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 const MandatsPage = React.lazy(() => import('../../pages/mandats/ui/MandatsPage').then(m => ({ default: m.MandatsPage })));
 const DevisPage = React.lazy(() => import('../../pages/devis/ui/DevisPage').then(m => ({ default: m.DevisPage })));
+const CatalogPage = React.lazy(() => import('../../pages/catalog/ui/CatalogPage').then(m => ({ default: m.CatalogPage })));
+const BankReconciliationPage = React.lazy(() => import('../../pages/banking/ui/BankReconciliationPage').then(m => ({ default: m.BankReconciliationPage })));
+const BankConnectCallbackPage = React.lazy(() => import('../../pages/banking/ui/BankConnectCallbackPage').then(m => ({ default: m.BankConnectCallbackPage })));
 const CommunicationsPage = React.lazy(() => import('../../pages/communications/ui/CommunicationsPage').then(m => ({ default: m.CommunicationsPage })));
 const DossiersPage = React.lazy(() => import('../../pages/dossiers/ui/DossiersPage').then(m => ({ default: m.DossiersPage })));
 const VisionneusePage = React.lazy(() => import('../../pages/visionneuse/ui/VisionneusePage').then(m => ({ default: m.VisionneusePage })));
@@ -109,6 +112,19 @@ const router = createBrowserRouter([
   {
     path: '/devis',
     element: <ProtectedRoute><DevisPage /></ProtectedRoute>,
+  },
+  {
+    path: '/catalogue',
+    element: <ProtectedRoute><CatalogPage /></ProtectedRoute>,
+  },
+  {
+    path: '/banque',
+    element: <ProtectedRoute><BankReconciliationPage /></ProtectedRoute>,
+  },
+  {
+    // URL de redirection du consentement bLink : doit correspondre à BLINK_REDIRECT_URI
+    path: '/banque/callback',
+    element: <ProtectedRoute><BankConnectCallbackPage /></ProtectedRoute>,
   },
   {
     path: '/communications',

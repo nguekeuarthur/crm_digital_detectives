@@ -118,4 +118,23 @@ export const initCronJobs = () => {
       console.error('❌ [CRON] Erreur lors de la relance des devis :', error);
     }
   });
+
+  // 7. Synchronisation bancaire en lecture seule + rapprochement (Tous les jours à 6h)
+  cron.schedule('0 6 * * *', async () => {
+    console.log('🏦 [CRON] Import des écritures bancaires et rapprochement...');
+    try {
+      const { BankingService } = await import('../modules/banking/banking.service');
+      const result = await BankingService.syncAll();
+      console.log(
+        `✅ [CRON] Banque : ${result.imported} écriture(s) importée(s), ` +
+        `${result.reconciliation.auto} rapprochement(s) automatique(s), ` +
+        `${result.reconciliation.suggested + result.reconciliation.unmatched} en vérification manuelle`
+      );
+      if (result.errors.length) {
+        console.warn('⚠️ [CRON] Comptes en erreur :', result.errors.join(' | '));
+      }
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors de la synchronisation bancaire :', error);
+    }
+  });
 };

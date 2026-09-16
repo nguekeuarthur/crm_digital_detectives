@@ -73,7 +73,7 @@ erDiagram
     Mandat ||--o{ Dossier : "contient"
     Dossier ||--o{ Dossier : "sous-dossiers"
     Dossier ||--o{ File : "stocke"
-    
+
     Mandat ||--o{ Invoice : "facturation"
     Mandat ||--o{ Quote : "devis associés"
     Client ||--o{ Quote : "demande"
@@ -82,19 +82,33 @@ erDiagram
 ## Description des Entités Principales
 
 ### `User` (Utilisateurs internes)
+
 Représente les employés du cabinet (Administrateurs, Enquêteurs) ainsi que les Sous-traitants. Gère l'authentification (Mots de passe, 2FA) et les droits d'accès via l'attribut `Role`.
 
 ### `Client`
+
 Les clients de l'agence. Peuvent être des prospects (`PROSPECT`) ou des clients actifs (`ACTIF`). Un client peut être rattaché à plusieurs mandats et avoir plusieurs devis ou factures.
 
 ### `Mandat`
+
 Le cœur du CRM. Représente une enquête ou une mission confiée par un `Client` et assignée à un `User` (Enquêteur). Possède un statut (`OUVERT`, `EN_COURS`, `TERMINE`, etc.) et sert de point d'ancrage pour les factures, devis, fichiers et sous-traitants.
 
 ### `Dossier` & `File`
+
 Gestion documentaire par mandat. Les dossiers peuvent être imbriqués (hiérarchie via `parentId`). `File` représente les preuves (photos, vidéos, rapports) stockées sur S3/Infomaniak, incluant les métadonnées géographiques et EXIF (pour les photos Nikon, par exemple).
 
 ### `Quote` (Devis) & `Service` (Catalogue)
+
 Permet de chiffrer une mission avant de la démarrer. `Quote` est constitué de plusieurs `QuoteItem` (non affichés dans l'ERD simplifié), qui se basent sur les tarifs standardisés du catalogue `Service`.
 
 ### `Invoice` (Factures)
-Représente un paiement dû par un client pour un mandat. Géré via Stripe (Payment Intent / Checkout Session). Intègre un suivi automatique des relances grâce à l'échéance (`dueDate`).
+
+Représente un paiement dû par un client pour un mandat. Géré via Stripe (Payment Intent / Checkout Session). Intègre un suivi automatique des relances grâce à l'échéance (`dueDate`). Le champ `paymentReference` porte la référence QR suisse (27 chiffres) imprimée sur la facture : c'est la clé du rapprochement bancaire automatique.
+
+### `BankAccount`, `BankConnection` & `BankTransaction` (Rapprochement bancaire)
+
+Trio dédié à la connexion bancaire **en lecture seule** (UBS via SIX bLink, ou import de relevés `camt.053`) — voir [ADR-004](adr/ADR-004-connexion-bancaire-lecture-seule.md).
+
+- `BankAccount` : compte suivi par le CRM (IBAN, connecteur utilisé, date de dernière synchronisation).
+- `BankConnection` : consentement et jetons OAuth2 chiffrés (AES-256), limités au scope de consultation `urn:blink:xs2a:ais`.
+- `BankTransaction` : écriture importée. La contrainte unique `(bankAccountId, externalId)` garantit l'idempotence des imports. Les colonnes `status`, `matchedInvoiceId`, `matchScore` et `matchMethod` portent le résultat du rapprochement ; `suggestions` conserve les candidats proposés à l'opérateur pour la file d'attente de vérification manuelle.

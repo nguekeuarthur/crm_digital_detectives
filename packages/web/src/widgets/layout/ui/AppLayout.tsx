@@ -54,7 +54,9 @@ import {
   IconFileInvoice,
   IconMap,
   IconCash,
-  IconMessageCircle
+  IconMessageCircle,
+  IconCategory2,
+  IconBuildingBank
 } from '@tabler/icons-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/api/base';
@@ -88,6 +90,8 @@ const navigationItems = [
   { label: 'Clients & Mandats', icon: IconUsers, href: '/clients' },
   { label: 'Mandats', icon: IconBriefcase, href: '/mandats' },
   { label: 'Devis', icon: IconFileInvoice, href: '/devis' },
+  { label: 'Catalogue', icon: IconCategory2, href: '/catalogue' },
+  { label: 'Rapprochement bancaire', icon: IconBuildingBank, href: '/banque' },
   { label: 'Planning', icon: IconCalendar, href: '/planning' },
   { label: 'Sous-traitants', icon: IconUserCheck, href: '/subcontractors' },
   { label: 'Communications', icon: IconPhone, href: '/communications' },
@@ -132,6 +136,30 @@ interface GeoFile {
   exifData: Record<string, any> | null; // eslint-disable-line @typescript-eslint/no-explicit-any
   userId: string | null;
   createdAt: string;
+}
+
+/** Devis d'un client, tels que les renvoie l'API */
+interface ClientQuote {
+  id: string;
+  reference: string;
+  status: string;
+  totalTTC: number;
+  mandat?: { title?: string } | null;
+}
+
+/** Facture d'un client, telle que la renvoie l'API */
+interface ClientInvoice {
+  id: string;
+  amount: number;
+  status: string;
+  dueDate?: string | null;
+  mandat?: { title?: string } | null;
+}
+
+/** Message lisible d'une erreur d'appel API, quelle que soit sa forme */
+function messageErreurApi(erreur: unknown): string {
+  const e = erreur as { response?: { data?: { error?: { message?: string } } }; message?: string };
+  return e?.response?.data?.error?.message || e?.message || 'Erreur inconnue';
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -191,8 +219,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<string | null>('mandats');
 
   // États Facturation & Devis
-  const [clientQuotes, setClientQuotes] = useState<any[]>([]);
-  const [clientInvoices, setClientInvoices] = useState<any[]>([]);
+  const [clientQuotes, setClientQuotes] = useState<ClientQuote[]>([]);
+  const [clientInvoices, setClientInvoices] = useState<ClientInvoice[]>([]);
 
   // Manual payment states
   const [manualPaymentInvoiceId, setManualPaymentInvoiceId] = useState<string | null>(null);
@@ -232,9 +260,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       // Rafraîchir les devis
       const quotesRes = await api.get(`/quotes?clientId=${clientModalId}`);
       setClientQuotes(quotesRes.data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      failNotif(nid, 'Erreur', 'Impossible de créer le devis. ' + (err.response?.data?.error?.message || err.message));
+      failNotif(nid, 'Erreur', 'Impossible de créer le devis. ' + (messageErreurApi(err)));
     } finally {
       setCreatingQuote(false);
     }
@@ -250,9 +278,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         const quotesRes = await api.get(`/quotes?clientId=${clientModalId}`);
         setClientQuotes(quotesRes.data || []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      failNotif(nid, 'Erreur', 'Impossible d\'envoyer le devis. ' + (err.response?.data?.error?.message || err.message));
+      failNotif(nid, 'Erreur', 'Impossible d\'envoyer le devis. ' + (messageErreurApi(err)));
     }
   };
 
@@ -270,9 +298,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         setClientQuotes(quotesRes.data || []);
         setClientInvoices(invoicesRes.data || []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      failNotif(nid, 'Erreur', 'Impossible de valider le devis. ' + (err.response?.data?.error?.message || err.message));
+      failNotif(nid, 'Erreur', 'Impossible de valider le devis. ' + (messageErreurApi(err)));
     }
   };
 
@@ -281,9 +309,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     try {
       await api.post(`/billing/invoices/${invoiceId}/send-to-client`);
       completeNotif(nid, 'Succès', 'Lien de paiement Stripe envoyé au client par e-mail !');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      failNotif(nid, 'Erreur', 'Impossible d\'envoyer le lien de paiement. ' + (err.response?.data?.error?.message || err.message));
+      failNotif(nid, 'Erreur', 'Impossible d\'envoyer le lien de paiement. ' + (messageErreurApi(err)));
     }
   };
 
@@ -312,9 +340,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         const invoicesRes = await api.get(`/billing/invoices?clientId=${clientModalId}`);
         setClientInvoices(invoicesRes.data || []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      failNotif(nid, 'Erreur', 'Erreur de simulation : ' + (err.response?.data?.error?.message || err.message));
+      failNotif(nid, 'Erreur', 'Erreur de simulation : ' + (messageErreurApi(err)));
     }
   };
 
@@ -333,9 +361,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         const invoicesRes = await api.get(`/billing/invoices?clientId=${clientModalId}`);
         setClientInvoices(invoicesRes.data || []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      failNotif(nid, 'Erreur', 'Impossible d\'enregistrer le paiement manuel. ' + (err.response?.data?.error?.message || err.message));
+      failNotif(nid, 'Erreur', 'Impossible d\'enregistrer le paiement manuel. ' + (messageErreurApi(err)));
     }
   };
 
@@ -568,9 +596,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       // Ouvrir automatiquement la fiche du client fraîchement créé
       setClientModalId(data.id);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || 'Impossible de créer le client';
+    } catch (err: unknown) {
+      const msg = messageErreurApi(err) || 'Impossible de créer le client';
       setCreateError(msg);
     } finally {
       setCreateLoading(false);
@@ -586,7 +613,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         collapsed: { mobile: true },
       }}
       padding="xl"
-      style={{ background: '#f8fafc', position: 'relative', minHeight: '100vh' }}
+      style={{ background: '#F9FAFB', position: 'relative', minHeight: '100vh' }}
     >
       {/* Balise style pour l'animation d'onde sonore et pulse gold */}
       <style dangerouslySetInnerHTML={{ __html: `
@@ -1007,7 +1034,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <Box>
                           <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Total Facturé</Text>
                           <Text fw={700} size="xl" mt={4}>
-                            {clientInvoices.reduce((sum: number, inv: any) => sum + inv.amount, 0).toFixed(2)} CHF
+                            {clientInvoices.reduce((sum: number, inv: ClientInvoice) => sum + inv.amount, 0).toFixed(2)} CHF
                           </Text>
                         </Box>
                         <ThemeIcon size="lg" radius="md" variant="light" color="gray">
@@ -1021,7 +1048,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <Box>
                           <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Devis en attente</Text>
                           <Text fw={700} size="xl" mt={4}>
-                            {clientQuotes.filter((q: any) => q.status === 'SENT').length}
+                            {clientQuotes.filter((q) => q.status === 'SENT').length}
                           </Text>
                         </Box>
                         <ThemeIcon size="lg" radius="md" variant="light" color="blue">
@@ -1034,11 +1061,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Group justify="space-between">
                         <Box>
                           <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Factures Impayées</Text>
-                          <Text fw={700} size="xl" c={clientInvoices.some((i: any) => i.status === 'PENDING') ? 'red' : 'green'} mt={4}>
-                            {clientInvoices.filter((i: any) => i.status === 'PENDING').length}
+                          <Text fw={700} size="xl" c={clientInvoices.some((i) => i.status === 'PENDING') ? 'red' : 'green'} mt={4}>
+                            {clientInvoices.filter((i) => i.status === 'PENDING').length}
                           </Text>
                         </Box>
-                        <ThemeIcon size="lg" radius="md" variant="light" color={clientInvoices.some((i: any) => i.status === 'PENDING') ? 'red' : 'green'}>
+                        <ThemeIcon size="lg" radius="md" variant="light" color={clientInvoices.some((i) => i.status === 'PENDING') ? 'red' : 'green'}>
                           <IconAlertCircle size={20} />
                         </ThemeIcon>
                       </Group>
@@ -1059,7 +1086,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                             <Select
                               label="Mandat associé"
                               placeholder="Choisir le mandat"
-                              data={clientDetails.mandats.map((m: any) => ({ value: m.id, label: m.title }))}
+                              data={clientDetails.mandats.map((m: { id: string; title: string }) => ({ value: m.id, label: m.title }))}
                               value={newQuoteMandatId}
                               onChange={(val: string | null) => setNewQuoteMandatId(val || '')}
                             />
@@ -1093,7 +1120,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </Stack>
                     ) : (
                       <Alert color="yellow" variant="light" icon={<IconAlertCircle size={16} />}>
-                        Vous devez d'abord créer un mandat pour ce client avant de pouvoir lui faire un devis.
+                        Vous devez d’abord créer un mandat pour ce client avant de pouvoir lui faire un devis.
                       </Alert>
                     )}
                   </Card>
@@ -1117,7 +1144,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                          {clientQuotes.map((quote: any) => (
+                          {clientQuotes.map((quote) => (
                             <Table.Tr key={quote.id}>
                               <Table.Td fw={500}>{quote.reference}</Table.Td>
                               <Table.Td>
@@ -1200,7 +1227,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                          {clientInvoices.map((invoice: any) => (
+                          {clientInvoices.map((invoice) => (
                             <Table.Tr key={invoice.id}>
                               <Table.Td fw={500}>FAC-{invoice.id.substring(0, 8).toUpperCase()}</Table.Td>
                               <Table.Td>
@@ -1306,7 +1333,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <Stack>
           <Text size="sm" c="dimmed">
-            Utilisez ce formulaire pour marquer une facture comme payée suite à la réception d'un virement, d'un chèque ou d'un paiement en espèces.
+            Utilisez ce formulaire pour marquer une facture comme payée suite à la réception d’un virement, d’un chèque ou d’un paiement en espèces.
           </Text>
           <TextInput
             type="date"

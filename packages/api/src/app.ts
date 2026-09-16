@@ -37,7 +37,9 @@ import { contractRoutes } from './modules/contract/contract.routes';
 import { whatsappPublicRoutes, whatsappProtectedRoutes } from './modules/whatsapp/whatsapp.routes';
 import { ringoverPublicRoutes } from './modules/ringover/ringover.routes';
 import { nikonRoutes } from './modules/nikon/nikon.routes';
+import { bankingRoutes } from './modules/banking/banking.routes';
 import chatbotRoutes from "./routes/chatbotRoutes";
+import chatRoutes from './modules/chat/chat.routes';
 // Les futurs modules seront ajoutés ici :
 // app.use('/api/v1/clients', clientRoutes);
 // app.use('/api/v1/mandats', mandatRoutes);
@@ -165,8 +167,6 @@ app.get('/api/v1/files/download-export/:id', ExportController.downloadExport);
 // Toutes les routes déclarées APRÈS cette ligne sont protégées
 app.use('/api/v1', authenticate);
 
-import chatRoutes from './modules/chat/chat.routes';
-
 // ─── Routes protégées (nécessitent un token valide) ───
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/admin', retentionRoutes);
@@ -187,6 +187,7 @@ app.use('/api/v1/mail', mailRoutes);
 app.use('/api/v1/mail', emailTemplateRoutes);
 app.use('/api/v1/whatsapp', whatsappProtectedRoutes);
 app.use('/api/v1/statistics', statisticsRouter);
+app.use('/api/v1/banking', bankingRoutes);
 app.use('/api/v1/chat', chatRoutes);
 
 // Middleware de gestion d'erreurs global

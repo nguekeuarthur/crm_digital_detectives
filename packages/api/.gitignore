@@ -4,3 +4,9 @@ node_modules
 
 /src/generated/prisma
 scratch/
+
+# Relevés bancaires importés (données financières) — seul le README est versionné
+storage/bank-import/*
+!storage/bank-import/README.md
+# Certificats client bLink
+certs/
