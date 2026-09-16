@@ -60,19 +60,24 @@ Ce guide référence toutes les variables d'environnement requises par l'API bac
 > [!IMPORTANT]
 > La connexion bancaire est strictement en lecture. Seul le scope AIS (`urn:blink:xs2a:ais`) est demandé ; tout scope de paiement est rejeté par l'API.
 
-| Variable                          | Type    | Défaut                  | Description                                                                                                     |
-| --------------------------------- | ------- | ----------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `BANK_PROVIDER`                   | String  | `CAMT_FILE`             | Connecteur par défaut d'un nouveau compte : `UBS_BLINK`, `CAMT_FILE` ou `MOCK`.                                 |
-| `BANK_CAMT_IMPORT_DIR`            | Path    | `./storage/bank-import` | Dossier de dépôt des relevés camt.053 (mode `CAMT_FILE`). Les fichiers traités sont archivés dans `processed/`. |
-| `BANK_SYNC_LOOKBACK_DAYS`         | Number  | `30`                    | Profondeur d'historique relue à chaque synchronisation.                                                         |
-| `BANK_AUTO_MATCH_THRESHOLD`       | Number  | `0.9`                   | Score minimal (0 → 1) pour solder une facture sans intervention humaine.                                        |
-| `BANK_SUGGEST_THRESHOLD`          | Number  | `0.5`                   | Score minimal pour proposer un candidat dans la file d'attente.                                                 |
-| `BANK_AMBIGUITY_MARGIN`           | Number  | `0.15`                  | Écart minimal avec le 2e candidat pour valider automatiquement.                                                 |
-| `BANK_SEND_RECEIPT_ON_AUTO_MATCH` | Boolean | `true`                  | Envoi du reçu PDF au client lors d'un rapprochement automatique.                                                |
-| `QR_REFERENCE_PREFIX`             | String  | (vide)                  | Préfixe (numéro d'adhérent) des références QR générées pour les factures.                                       |
-| `COMPANY_NAME`                    | String  | `Digitaldetectives`     | Bénéficiaire imprimé sur la facture pour le paiement par virement.                                              |
-| `COMPANY_IBAN`                    | String  | (vide)                  | IBAN du compte à créditer, imprimé sur la facture et dans l'e-mail. Sans lui, seule la référence est affichée.  |
-| `BANK_MOCK_IBAN`                  | String  | `CH5604835012345678009` | IBAN utilisé par le connecteur de démonstration.                                                                |
+| Variable                          | Type    | Défaut                  | Description                                                                                                                                                                             |
+| --------------------------------- | ------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BANK_PROVIDER`                   | String  | `CAMT_FILE`             | Connecteur par défaut d'un nouveau compte : `UBS_BLINK`, `CAMT_FILE` ou `MOCK`.                                                                                                         |
+| `BANK_CAMT_IMPORT_DIR`            | Path    | `./storage/bank-import` | Dossier de dépôt des relevés camt.053 (mode `CAMT_FILE`). Les fichiers traités sont archivés dans `processed/`.                                                                         |
+| `BANK_SYNC_LOOKBACK_DAYS`         | Number  | `30`                    | Profondeur d'historique relue à chaque synchronisation.                                                                                                                                 |
+| `BANK_AUTO_MATCH_THRESHOLD`       | Number  | `0.9`                   | Score minimal (0 → 1) pour solder une facture sans intervention humaine.                                                                                                                |
+| `BANK_SUGGEST_THRESHOLD`          | Number  | `0.5`                   | Score minimal pour proposer un candidat dans la file d'attente.                                                                                                                         |
+| `BANK_AMBIGUITY_MARGIN`           | Number  | `0.15`                  | Écart minimal avec le 2e candidat pour valider automatiquement.                                                                                                                         |
+| `BANK_SEND_RECEIPT_ON_AUTO_MATCH` | Boolean | `true`                  | Envoi du reçu PDF au client lors d'un rapprochement automatique.                                                                                                                        |
+| `QR_REFERENCE_PREFIX`             | String  | (vide)                  | Préfixe (numéro d'adhérent) des références QR générées pour les factures.                                                                                                               |
+| `COMPANY_NAME`                    | String  | `Digitaldetectives`     | Nom du bénéficiaire, sur la QR-facture et le bloc de virement.                                                                                                                          |
+| `COMPANY_IBAN`                    | String  | (vide)                  | Compte à créditer. Un **QR-IBAN** (institut 30000–31999) impose des références QR à 27 chiffres ; un IBAN ordinaire impose des références SCOR (`RF…`). Le format suit automatiquement. |
+| `COMPANY_STREET`                  | String  | (vide)                  | Rue du bénéficiaire. **Requis** pour la section paiement.                                                                                                                               |
+| `COMPANY_BUILDING_NUMBER`         | String  | (vide)                  | Numéro de rue du bénéficiaire (facultatif).                                                                                                                                             |
+| `COMPANY_POSTAL_CODE`             | String  | (vide)                  | NPA du bénéficiaire. **Requis** pour la section paiement.                                                                                                                               |
+| `COMPANY_CITY`                    | String  | (vide)                  | Localité du bénéficiaire. **Requis** pour la section paiement.                                                                                                                          |
+| `COMPANY_COUNTRY`                 | String  | `CH`                    | Code pays du bénéficiaire (2 lettres).                                                                                                                                                  |
+| `BANK_MOCK_IBAN`                  | String  | `CH5604835012345678009` | IBAN utilisé par le connecteur de démonstration.                                                                                                                                        |
 
 ### Spécifique bLink (requis uniquement si `BANK_PROVIDER=UBS_BLINK`)
 

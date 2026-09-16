@@ -61,6 +61,40 @@ export function isValidQrReference(reference?: string | null): boolean {
   return mod10Recursive(normalized.slice(0, 26)) === Number(normalized[26]);
 }
 
+/**
+ * Un QR-IBAN se distingue d'un IBAN ordinaire par son identifiant d'institut
+ * financier (positions 5 à 9), compris entre 30000 et 31999. La distinction est
+ * déterminante : un QR-IBAN exige une référence QR, un IBAN ordinaire l'interdit.
+ */
+export function isQrIban(iban?: string | null): boolean {
+  const normalized = normalizeReference(iban);
+  if (!/^CH\d{2}\d{5}/.test(normalized)) return false;
+  const institut = Number(normalized.slice(4, 9));
+  return institut >= 30000 && institut <= 31999;
+}
+
+/**
+ * Génère une référence créancier SCOR (ISO 11649) : « RF », deux chiffres de
+ * contrôle modulo 97, puis jusqu'à 21 caractères alphanumériques.
+ *
+ * C'est la référence structurée utilisable avec un IBAN ordinaire, quand on ne
+ * dispose pas d'un QR-IBAN.
+ */
+export function buildScorReference(seed: string, prefix = process.env.QR_REFERENCE_PREFIX || ''): string {
+  const body = `${prefix}${seed}`.replace(/[^0-9A-Za-z]/g, '').toUpperCase().slice(0, 21);
+  if (!body) throw new Error('Référence SCOR : identifiant de base vide');
+
+  // ISO 7064 MOD 97-10 : la clé est calculée sur « corps + RF00 »
+  const numeric = `${body}RF00`.replace(/[A-Z]/g, (char) => String(char.charCodeAt(0) - 55));
+  let remainder = 0;
+  for (const char of numeric) {
+    remainder = (remainder * 10 + Number(char)) % 97;
+  }
+  const key = 98 - remainder;
+
+  return `RF${String(key).padStart(2, '0')}${body}`;
+}
+
 /** Vérifie une référence créancier SCOR ISO 11649 (RFxx…) */
 export function isValidScorReference(reference?: string | null): boolean {
   const normalized = normalizeReference(reference);

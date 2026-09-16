@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@mantine/core": "^9.1.1",
+    "@mantine/dropzone": "^9.2.2",
     "@mantine/hooks": "^9.1.1",
     "@mantine/notifications": "^9.2.2",
     "@mantine/tiptap": "^9.2.2",

@@ -64,7 +64,11 @@ Une facture n'est soldée automatiquement que si le score dépasse `BANK_AUTO_MA
 
 Tout ce qui n'est pas auto-validé alimente la file d'attente de vérification manuelle (`/banque`), avec ses candidats pré-classés et le détail des motifs de score.
 
-Pour maximiser le signal n° 1, le CRM attribue à chaque facture une **référence QR suisse à 27 chiffres** (`Invoice.paymentReference`, clé de contrôle modulo 10 récursif) destinée à être imprimée sur le document envoyé au client.
+Pour maximiser le signal n° 1, le CRM attribue à chaque facture une référence structurée (`Invoice.paymentReference`), **imprimée sur le document envoyé au client sous forme de QR-facture**.
+
+Le format de la référence n'est pas un choix libre : il est dicté par le compte à créditer. Un **QR-IBAN** (identifiant d'institut 30000–31999) impose une référence QR à 27 chiffres ; un **IBAN ordinaire** l'interdit et n'admet qu'une référence créancier **SCOR** (`RF…`, ISO 11649). `ensureInvoicePaymentReference()` lit `COMPANY_IBAN` et produit le format correspondant, ce qui rend le dispositif exploitable immédiatement avec l'IBAN existant, sans attendre l'ouverture d'un QR-IBAN.
+
+La **section paiement normalisée** (récépissé et QR code, `swissqrbill`) est ajoutée en bas de facture. Elle est déterminante : sans elle, le client devrait recopier 27 caractères à la main, et chaque référence perdue est un virement qui retombe en vérification manuelle. Les mesures sont sans appel — les paiements portant la référence sont rapprochés automatiquement, les autres jamais. Si les coordonnées structurées du bénéficiaire sont incomplètes, aucune section n'est produite : la facture part avec les coordonnées en texte plutôt qu'avec un document que la banque refuserait.
 
 ## Conséquences
 

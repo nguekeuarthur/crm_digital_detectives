@@ -4,6 +4,8 @@ import { BankTransaction } from '@prisma/client';
 import { parseCamtDocument } from './src/modules/banking/camt-parser.js';
 import {
   buildQrReference,
+  buildScorReference,
+  isQrIban,
   isValidQrReference,
   isValidScorReference,
   mod10Recursive,
@@ -144,6 +146,24 @@ function testQrReference() {
   check('Référence créancier SCOR ISO 11649 validée', () => {
     assert.ok(isValidScorReference('RF18539007547034'), 'RF18539007547034 est une référence SCOR valide');
     assert.ok(!isValidScorReference('RF19539007547034'), 'une clé fausse doit être rejetée');
+  });
+
+  check('La génération SCOR retrouve la clé de l’exemple de la norme', () => {
+    // Exemple canonique de l'ISO 11649 : « 539007547034 » porte la clé 18
+    assert.strictEqual(buildScorReference('539007547034', ''), 'RF18539007547034');
+  });
+
+  check('Toute référence SCOR produite est valide', () => {
+    for (const seed of ['1', 'DD20260042', 'ABC123', '999999999999999999999']) {
+      const reference = buildScorReference(seed, '');
+      assert.ok(isValidScorReference(reference), `${seed} → ${reference}`);
+    }
+  });
+
+  check('Un QR-IBAN se distingue d’un IBAN ordinaire', () => {
+    assert.ok(isQrIban('CH44 3199 9123 0008 8901 2'), 'institut 31999 : QR-IBAN');
+    assert.ok(!isQrIban('CH5604835012345678009'), 'institut 04835 : IBAN ordinaire');
+    assert.ok(!isQrIban(''), 'une valeur vide n’est pas un QR-IBAN');
   });
 }
 

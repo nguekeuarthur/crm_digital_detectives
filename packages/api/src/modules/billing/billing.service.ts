@@ -6,6 +6,7 @@ import { MailService } from '../mail/mail.service';
 import { StripeService } from './stripe.service';
 import { ensureInvoicePaymentReference } from '../banking/payment-reference.service';
 import { formatQrReference } from '../banking/qr-reference';
+import { attacherQrBill, expliquerAbsence } from '../banking/qr-bill.service';
 import PDFDocument from 'pdfkit';
 
 /** Ce que la facture doit porter pour être mise en page (facture Prisma + relations chargées) */
@@ -371,10 +372,28 @@ export class BillingService {
          .fillColor(isPaid ? '#2f9e44' : '#e03131')
          .text(`${invoice.amount.toFixed(2)} CHF`);
 
-      // Coordonnées de virement : la référence de paiement est le signal qui
-      // rend le rapprochement bancaire automatique fiable (cf. ADR-004).
-      if (!isPaid && invoice.paymentReference) {
-        doc.moveDown(2);
+      doc.moveDown(2);
+
+      // Section paiement de la QR-facture : le client scanne, son application
+      // reprend seule le montant et la référence. C'est ce qui évite la
+      // recopie manuelle des 27 chiffres, et donc l'essentiel des écarts de
+      // rapprochement (cf. ADR-004).
+      let qrAjoutee = false;
+      if (!isPaid) {
+        const resultat = attacherQrBill(doc, {
+          montant: invoice.amount,
+          reference: invoice.paymentReference,
+          message: `Facture ${reference}`,
+        });
+        qrAjoutee = resultat.ajoutee;
+        if (!qrAjoutee) {
+          console.warn(`[Facture ${reference}] QR-facture non produite : ${expliquerAbsence(resultat)}`);
+        }
+      }
+
+      // Repli : sans section paiement, le client a tout de même besoin des
+      // coordonnées de virement en clair.
+      if (!isPaid && !qrAjoutee && invoice.paymentReference) {
         doc.fontSize(12).fillColor('#1a1a2e').text('Paiement par virement bancaire', { underline: true });
         doc.moveDown(0.5);
         doc.fontSize(11).fillColor('#333');
@@ -386,10 +405,12 @@ export class BillingService {
         doc.fontSize(9).fillColor('#666')
            .text("Merci de reporter cette référence sans la modifier : elle permet l'affectation automatique de votre paiement.");
         doc.fillColor('#333');
+        doc.moveDown(4);
+        doc.fontSize(10).text('Merci pour votre confiance.', { align: 'center' });
+      } else if (!qrAjoutee) {
+        doc.moveDown(4);
+        doc.fontSize(10).text('Merci pour votre confiance.', { align: 'center' });
       }
-
-      doc.moveDown(4);
-      doc.fontSize(10).text('Merci pour votre confiance.', { align: 'center' });
 
       doc.end();
     });
