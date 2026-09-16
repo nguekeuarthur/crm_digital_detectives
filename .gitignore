@@ -29,3 +29,15 @@ Thumbs.db
 
 # Misc
 *.tsbuildinfo
+
+# Decrypted previews
+decrypted_files/
+packages/api/decrypted_files/
+
+# Local test and verification scripts
+packages/api/test-whatsapp.ts
+packages/api/verify-activity.ts
+packages/api/decrypt-latest.ts
+packages/api/test-ringover.ts
+
+packages/api/storage/

@@ -1,0 +1,52 @@
+import { Request, Response, NextFunction } from 'express';
+
+/**
+ * Nettoie une chaîne de caractères contre les failles XSS (balises HTML)
+ */
+function sanitizeString(str: string): string {
+  return str
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Nettoie récursivement un objet contenant des chaînes de caractères
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sanitizeObject(obj: any, parentKey?: string): any {
+  if (typeof obj === 'string') {
+    const sensitiveKeys = ['password', 'passwordConfirm', 'refreshToken', 'token', 'code', 'accessToken', 'htmlContent', 'htmlBody'];
+    if (parentKey && sensitiveKeys.includes(parentKey)) {
+      return obj;
+    }
+    return sanitizeString(obj);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sanitizeObject(item, parentKey));
+  }
+  if (obj !== null && typeof obj === 'object') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sanitized: any = {};
+    for (const key of Object.keys(obj)) {
+      sanitized[key] = sanitizeObject(obj[key], key);
+    }
+    return sanitized;
+  }
+  return obj;
+}
+
+/**
+ * Middleware d'assainissement global XSS
+ */
+export const xssSanitizer = (req: Request, _res: Response, next: NextFunction) => {
+  if (req.body) {
+    req.body = sanitizeObject(req.body);
+  }
+  if (req.query) {
+    req.query = sanitizeObject(req.query);
+  }
+  if (req.params) {
+    req.params = sanitizeObject(req.params);
+  }
+  next();
+};
