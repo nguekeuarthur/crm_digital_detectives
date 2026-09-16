@@ -1,0 +1,1009 @@
+<title>Liaison bancaire UBS</title>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+  :root {
+    --paper: #f1f4f6;
+    --surface: #ffffff;
+    --surface-2: #e9eef1;
+    --ink: #15202b;
+    --ink-soft: #4d5e6b;
+    --ink-faint: #7a8a96;
+    --rule: #d5dee3;
+    --accent: #1f5673;
+    --accent-soft: #e2edf3;
+    --alert: #96560f;
+    --alert-soft: #fbefdd;
+    --ok: #2b6a4e;
+    --ok-soft: #e0efe7;
+
+    --font-display: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --paper: #0f1720;
+      --surface: #16212c;
+      --surface-2: #1d2937;
+      --ink: #e7eef3;
+      --ink-soft: #a0b0bc;
+      --ink-faint: #7a8c99;
+      --rule: #2b3a47;
+      --accent: #85bcd7;
+      --accent-soft: #19303f;
+      --alert: #dda662;
+      --alert-soft: #2f2517;
+      --ok: #82c4a2;
+      --ok-soft: #162b22;
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --paper: #0f1720;
+    --surface: #16212c;
+    --surface-2: #1d2937;
+    --ink: #e7eef3;
+    --ink-soft: #a0b0bc;
+    --ink-faint: #7a8c99;
+    --rule: #2b3a47;
+    --accent: #85bcd7;
+    --accent-soft: #19303f;
+    --alert: #dda662;
+    --alert-soft: #2f2517;
+    --ok: #82c4a2;
+    --ok-soft: #162b22;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 850px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 40px 72px;
+  }
+
+  /* ── En-tête ────────────────────────────────────────────── */
+  .masthead {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 20px;
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 12px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(30px, 6vw, 44px);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 18px;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  /* ── Rythme général ─────────────────────────────────────── */
+  section {
+    margin-block: 52px;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 25px;
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 17.5px;
+    margin: 26px 0 6px;
+  }
+  p {
+    margin: 0 0 14px;
+    max-width: 68ch;
+  }
+  .lede {
+    color: var(--ink-soft);
+    margin-bottom: 26px;
+    max-width: 68ch;
+  }
+  a {
+    color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+  strong {
+    font-weight: 600;
+  }
+  code,
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 0.87em;
+  }
+  code {
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* ── Badges de responsabilité ───────────────────────────── */
+  .who {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .who-arnaud {
+    background: var(--alert-soft);
+    color: var(--alert);
+  }
+  .who-toi {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* ── Étapes ─────────────────────────────────────────────── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    gap: 0 20px;
+    padding: 26px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .step:last-child {
+    border-bottom: 1px solid var(--rule);
+  }
+  .step-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-faint);
+    padding-top: 4px;
+  }
+  .step-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .step-head h3 {
+    margin: 0;
+    font-size: 20px;
+  }
+  .step-body > *:last-child {
+    margin-bottom: 0;
+  }
+
+  .why {
+    border-left: 2px solid var(--rule);
+    padding-left: 16px;
+    margin: 16px 0;
+    color: var(--ink-soft);
+  }
+  .why-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 3px;
+  }
+  .check {
+    background: var(--ok-soft);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-top: 16px;
+    font-size: 15px;
+  }
+  .check .why-label {
+    color: var(--ok);
+  }
+
+  /* ── Encadré d'alerte ───────────────────────────────────── */
+  .blocker {
+    background: var(--alert-soft);
+    border-left: 3px solid var(--alert);
+    border-radius: 0 5px 5px 0;
+    padding: 24px 26px;
+    margin-block: 26px;
+  }
+  .blocker h2 {
+    color: var(--alert);
+    font-size: 22px;
+  }
+  .blocker p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Comparatif IBAN ────────────────────────────────────── */
+  .iban-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .iban-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 16px 18px;
+  }
+  .iban-card .why-label {
+    margin-bottom: 8px;
+  }
+  .iban-num {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .iban-num em {
+    font-style: normal;
+    background: var(--alert-soft);
+    color: var(--alert);
+    padding: 1px 3px;
+    border-radius: 2px;
+  }
+  .iban-card p {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    margin: 10px 0 0;
+  }
+
+  /* ── Blocs de code / extraits ───────────────────────────── */
+  .snippet {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 16px 18px;
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  .snippet pre {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.75;
+  }
+  .snippet .c {
+    color: var(--ink-faint);
+  }
+
+  /* ── Diagramme ──────────────────────────────────────────── */
+  .figure {
+    margin: 26px 0;
+  }
+  .figure-scroll {
+    overflow-x: auto;
+  }
+  .figure svg {
+    display: block;
+    min-width: 660px;
+    width: 100%;
+    height: auto;
+  }
+  figcaption {
+    font-size: 14px;
+    color: var(--ink-faint);
+    margin-top: 10px;
+    max-width: 68ch;
+  }
+
+  /* ── Tableau de répartition ─────────────────────────────── */
+  .table-scroll {
+    overflow-x: auto;
+    margin: 20px 0;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 480px;
+    font-size: 15px;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 11px 14px 11px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border-bottom-color: var(--ink-soft);
+  }
+  td:last-child,
+  th:last-child {
+    padding-right: 0;
+  }
+
+  /* ── Listes ─────────────────────────────────────────────── */
+  ul,
+  ol {
+    margin: 0 0 14px;
+    padding-left: 20px;
+    max-width: 68ch;
+  }
+  li {
+    margin-bottom: 7px;
+  }
+  li::marker {
+    color: var(--ink-faint);
+  }
+
+  /* ── État du code ───────────────────────────────────────── */
+  .status {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 24px 26px;
+  }
+  .status h2 {
+    font-size: 20px;
+  }
+  .status ul {
+    margin-bottom: 0;
+  }
+
+  .footnote {
+    font-size: 14px;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--rule);
+    padding-top: 18px;
+    margin-top: 52px;
+  }
+
+  @media (max-width: 620px) {
+    .iban-pair {
+      grid-template-columns: 1fr;
+    }
+    .step {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .step-num {
+      padding-top: 0;
+      margin-bottom: 4px;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">CRM Digital Detectives · issue #119</p>
+    <h1>Mettre en service la liaison bancaire</h1>
+    <p class="standfirst">
+      Le code est écrit, vérifié et livré — QR-facture comprise. Ce qui reste tient en quatre
+      étapes, dont une seule ne peut être faite que par le titulaire du compte. Voici chacune
+      d'elles, en détail.
+    </p>
+  </header>
+
+  <section>
+    <h2>Le principe, en une minute</h2>
+    <p class="lede">
+      Avant d'entrer dans les étapes, il faut comprendre ce qu'on branche exactement — parce que ça
+      détermine qui doit faire quoi.
+    </p>
+
+    <p>
+      Le CRM ne se connecte jamais au compte bancaire. Il lit un
+      <strong>relevé que la banque produit</strong>, un fichier au format ISO 20022 appelé
+      <code>camt.053</code>. Ce fichier contient chaque écriture du jour : montant, date, nom du
+      donneur d'ordre, et surtout la <strong>référence de paiement</strong> que le client a indiquée
+      lors de son virement.
+    </p>
+
+    <p>
+      Tout le mécanisme repose sur cette référence. Chaque facture émise par le CRM en reçoit une,
+      unique. Si le client la reporte dans son virement, la banque la restitue telle quelle dans le
+      relevé, et le CRM sait sans aucune ambiguïté quelle facture solder. S'il ne la reporte pas, le
+      CRM tente de deviner par le montant et le nom — et en cas de doute, il ne décide pas :
+      l'écriture part dans une file d'attente que quelqu'un valide à la main.
+    </p>
+
+    <figure class="figure">
+      <div class="figure-scroll">
+        <svg
+          viewBox="0 0 880 260"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label="Le CRM imprime une référence sur la facture, le client la reporte dans son virement, UBS la restitue dans le relevé camt.053, le CRM rapproche et solde la facture. Aucun flux ne va du CRM vers la banque."
+        >
+          <defs>
+            <marker
+              id="ar"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+
+          <!-- étapes -->
+          <g font-family="var(--font-display)" font-size="14" font-weight="600">
+            <rect
+              x="8"
+              y="74"
+              width="170"
+              height="64"
+              rx="5"
+              fill="var(--surface)"
+              stroke="var(--accent)"
+              stroke-width="1.5"
+            />
+            <text x="93" y="100" text-anchor="middle" fill="var(--ink)">Le CRM émet</text>
+            <text x="93" y="119" text-anchor="middle" fill="var(--ink)">la facture</text>
+
+            <rect
+              x="243"
+              y="74"
+              width="170"
+              height="64"
+              rx="5"
+              fill="var(--surface)"
+              stroke="var(--rule)"
+              stroke-width="1.5"
+            />
+            <text x="328" y="100" text-anchor="middle" fill="var(--ink)">Le client paie</text>
+            <text x="328" y="119" text-anchor="middle" fill="var(--ink)">par virement</text>
+
+            <rect
+              x="478"
+              y="74"
+              width="170"
+              height="64"
+              rx="5"
+              fill="var(--surface)"
+              stroke="var(--rule)"
+              stroke-width="1.5"
+            />
+            <text x="563" y="100" text-anchor="middle" fill="var(--ink)">UBS produit</text>
+            <text x="563" y="119" text-anchor="middle" fill="var(--ink)">le relevé camt.053</text>
+
+            <rect
+              x="713"
+              y="74"
+              width="160"
+              height="64"
+              rx="5"
+              fill="var(--surface)"
+              stroke="var(--ok)"
+              stroke-width="1.5"
+            />
+            <text x="793" y="100" text-anchor="middle" fill="var(--ink)">Le CRM rapproche</text>
+            <text x="793" y="119" text-anchor="middle" fill="var(--ink)">et solde</text>
+          </g>
+
+          <!-- flèches -->
+          <g stroke="var(--ink-faint)" stroke-width="1.4" fill="none" marker-end="url(#ar)">
+            <line x1="182" y1="106" x2="236" y2="106" />
+            <line x1="417" y1="106" x2="471" y2="106" />
+            <line x1="652" y1="106" x2="706" y2="106" />
+          </g>
+
+          <!-- libellés des flèches -->
+          <g
+            font-family="var(--font-mono)"
+            font-size="10.5"
+            fill="var(--ink-faint)"
+            text-anchor="middle"
+          >
+            <text x="209" y="62">référence</text>
+            <text x="209" y="75">imprimée</text>
+            <text x="444" y="62">référence</text>
+            <text x="444" y="75">reportée</text>
+            <text x="679" y="62">référence</text>
+            <text x="679" y="75">restituée</text>
+          </g>
+
+          <!-- le sens unique -->
+          <g>
+            <path
+              d="M 793 158 C 793 200, 563 200, 563 166"
+              stroke="var(--alert)"
+              stroke-width="1.4"
+              fill="none"
+              stroke-dasharray="5 4"
+            />
+            <line x1="670" y1="177" x2="692" y2="195" stroke="var(--alert)" stroke-width="1.8" />
+            <line x1="692" y1="177" x2="670" y2="195" stroke="var(--alert)" stroke-width="1.8" />
+            <text
+              x="681"
+              y="228"
+              text-anchor="middle"
+              font-family="var(--font-mono)"
+              font-size="10.5"
+              fill="var(--alert)"
+            >
+              aucune écriture vers la banque
+            </text>
+          </g>
+
+          <!-- ancrage -->
+          <text
+            x="93"
+            y="172"
+            text-anchor="middle"
+            font-family="var(--font-mono)"
+            font-size="10.5"
+            fill="var(--ink-faint)"
+          >
+            QR code sur le PDF
+          </text>
+          <text
+            x="563"
+            y="172"
+            text-anchor="middle"
+            font-family="var(--font-mono)"
+            font-size="10.5"
+            fill="var(--ink-faint)"
+          >
+            fichier déposé chaque jour
+          </text>
+        </svg>
+      </div>
+      <figcaption>
+        La liaison est à sens unique par construction : le CRM lit un fichier, il n'a aucun moyen
+        technique d'envoyer un ordre à la banque.
+      </figcaption>
+    </figure>
+
+    <p>
+      C'est cette architecture qui explique la répartition des rôles : tout ce qui touche à la
+      banque — obtenir un numéro de compte, activer un relevé, signer un contrat — appartient au
+      titulaire du compte. Tout ce qui touche au fichier une fois produit est du ressort technique.
+    </p>
+  </section>
+
+  <section>
+    <h2>La QR-facture est en place</h2>
+    <p class="lede">
+      Ce qui était le principal obstacle est levé : la facture porte désormais le carré à scanner,
+      et elle fonctionne avec l'IBAN actuel de l'agence.
+    </p>
+
+    <p>
+      Chaque facture envoyée porte en bas une <strong>section paiement normalisée</strong> :
+      récépissé, QR code avec la croix suisse, montant et référence. Le client scanne, son
+      application bancaire remplit tout. Il n'a plus rien à recopier — et c'est de là que vient
+      l'essentiel du rendement, puisqu'un paiement sans référence ne peut pas être rapproché
+      automatiquement.
+    </p>
+
+    <h3>Un piège suisse, contourné</h3>
+    <p>
+      Le format de la référence n'est pas au choix : il est
+      <strong>imposé par le compte à créditer</strong>, et les banques le vérifient. Une référence à
+      27 chiffres n'est valable que sur un <strong>QR-IBAN</strong> — un second numéro sur le même
+      compte, que la banque délivre gratuitement. Sur un IBAN ordinaire, elle fait
+      <strong>refuser le virement</strong>.
+    </p>
+
+    <div class="iban-pair">
+      <div class="iban-card">
+        <span class="why-label">IBAN ordinaire — votre cas</span>
+        <div class="iban-num">CH56 <em>0483</em> 5012 3456 7800 9</div>
+        <p>
+          Impose une référence créancier SCOR : <span class="mono">RF91 8104 0011 8145 5493</span>.
+        </p>
+      </div>
+      <div class="iban-card">
+        <span class="why-label">QR-IBAN</span>
+        <div class="iban-num">CH44 <em>3199</em> 9123 0008 8901 2</div>
+        <p>Même compte, même argent. Impose une référence QR à 27 chiffres.</p>
+      </div>
+    </div>
+
+    <p>
+      Le CRM génère désormais <strong>les deux formats</strong> et choisit seul le bon d'après
+      l'IBAN configuré. Vous n'avez donc <strong>pas besoin d'attendre un QR-IBAN</strong> : le
+      dispositif fonctionne tout de suite avec le compte existant. Et si vous en ouvrez un plus
+      tard, il suffira de changer l'IBAN en configuration — le format suivra sans autre
+      intervention.
+    </p>
+
+    <p>
+      Par sécurité, une combinaison incohérente entre le compte et la référence ne produit
+      <em>aucune</em> section paiement : mieux vaut une facture sans QR code qu'une facture que la
+      banque refuse.
+    </p>
+  </section>
+
+  <section>
+    <h2>Les quatre étapes</h2>
+    <p class="lede">
+      Elles s'enchaînent dans cet ordre. La première appartient à Arnaud et conditionne tout le
+      reste ; les deux suivantes sont techniques ; la dernière devient une habitude quotidienne.
+    </p>
+
+    <div class="steps">
+      <article class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Activer le relevé camt.053 dans l'E-Banking</h3>
+            <span class="who who-arnaud">Arnaud</span>
+          </div>
+          <p>
+            Dans l'E-Banking UBS, dans la section des documents ou relevés électroniques, activer le
+            <strong>relevé de compte camt.053</strong> (parfois appelé « relevé ISO 20022 » ou «
+            relevé électronique XML ») sur le compte d'encaissement. C'est gratuit et immédiat.
+          </p>
+          <div class="why">
+            <span class="why-label">Pourquoi</span>
+            C'est le seul format qui transporte la référence de paiement dans un champ structuré. Un
+            relevé PDF ou un export CSV ne la contiennent pas de façon exploitable : sans camt.053,
+            le rapprochement retomberait sur des correspondances approximatives de montants et de
+            noms.
+          </div>
+          <p>
+            Cette étape n'exige aucun accès pour qui que ce soit d'autre.
+            <strong>Les identifiants E-Banking ne doivent être communiqués à personne</strong>, ni à
+            toi ni au CRM — rien dans le dispositif n'en a besoin.
+          </p>
+          <div class="check">
+            <span class="why-label">Comment vérifier</span>
+            Télécharger un premier relevé et l'ouvrir dans un éditeur de texte. Le fichier doit être
+            du XML et contenir des balises <span class="mono">&lt;Ntry&gt;</span>. Si un virement
+            référencé y figure, on y trouve aussi
+            <span class="mono">&lt;CdtrRefInf&gt;&lt;Ref&gt;</span> suivi de la référence.
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Renseigner la configuration</h3>
+            <span class="who who-toi">Toi</span>
+          </div>
+          <p>Dans <code>packages/api/.env</code> :</p>
+          <div class="snippet">
+            <pre><span class="c"># Bénéficiaire de la QR-facture — l'adresse est obligatoire,</span>
+<span class="c"># sans elle aucune section paiement n'est produite</span>
+COMPANY_NAME="Digital Detectives Sàrl"
+COMPANY_IBAN="CH56 0483 5012 3456 7800 9"
+COMPANY_STREET="Rue du Rhône"
+COMPANY_BUILDING_NUMBER="14"
+COMPANY_POSTAL_CODE="1204"
+COMPANY_CITY="Genève"
+COMPANY_COUNTRY="CH"
+
+<span class="c"># Garde-fou : aucun reçu automatique tant que ce n'est pas éprouvé</span>
+BANK_SEND_RECEIPT_ON_AUTO_MATCH=false</pre>
+          </div>
+          <div class="why">
+            <span class="why-label">Pourquoi l'adresse complète</span>
+            La norme suisse exige une adresse structurée du bénéficiaire — rue, numéro, NPA,
+            localité séparés. Il ne suffit pas d'un nom et d'un IBAN. Si l'un de ces champs manque,
+            le CRM n'imprime pas de QR code : il journalise le motif et retombe sur les coordonnées
+            en texte, pour que la facture parte quand même.
+          </div>
+          <div class="why">
+            <span class="why-label">Pourquoi la dernière ligne</span>
+            Sans elle, la variable vaut <code>true</code> par défaut et le premier passage du
+            traitement nocturne enverrait de vrais reçus à de vrais clients, sur la foi de
+            rapprochements que personne n'a encore relus. On la repassera à <code>true</code> plus
+            tard, en connaissance de cause.
+          </div>
+          <div class="check">
+            <span class="why-label">Comment vérifier</span>
+            Émettre une facture depuis le CRM et ouvrir le PDF. La section paiement doit apparaître
+            en bas, en noir, avec le QR code, le bon bénéficiaire et une référence commençant par
+            <span class="mono">RF</span>. Scanner le code avec une application bancaire : elle doit
+            proposer le paiement pré-rempli.
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Déclarer le compte suivi dans le CRM</h3>
+            <span class="who who-toi">Toi</span>
+          </div>
+          <p>
+            Sur l'écran <strong>Rapprochement bancaire</strong> (<code>/banque</code>, accessible
+            aux administrateurs), déclarer le compte : un libellé, l'IBAN, et le connecteur
+            <code>CAMT_FILE</code>.
+          </p>
+          <div class="why">
+            <span class="why-label">Point de vigilance</span>
+            L'IBAN à déclarer ici est celui qui <em>figure dans le relevé</em> : ouvre le premier
+            fichier et lis la valeur de la balise <span class="mono">&lt;IBAN&gt;</span>.
+            Aujourd'hui c'est le même que celui de l'étape 2. Le jour où un QR-IBAN sera ouvert, les
+            deux différeront — le QR-IBAN sert à <em>recevoir</em> et va dans
+            <code>COMPANY_IBAN</code>, tandis que le relevé continue d'identifier le compte par son
+            IBAN ordinaire, qui est celui à saisir ici.
+          </div>
+          <div class="check">
+            <span class="why-label">Comment vérifier</span>
+            Le compte apparaît dans la liste de l'écran avec son connecteur. S'il n'apparaît pas,
+            l'IBAN saisi n'est pas au format suisse attendu.
+          </div>
+        </div>
+      </article>
+
+      <article class="step">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <div class="step-head">
+            <h3>Installer la routine quotidienne</h3>
+            <span class="who who-arnaud">Arnaud ou l'administratif</span>
+          </div>
+          <p>
+            Chaque jour ouvrable, télécharger le relevé camt.053 depuis l'E-Banking et le déposer
+            dans le dossier <code>packages/api/storage/bank-import/</code>. C'est tout — le fichier
+            peut être déposé à n'importe quelle heure.
+          </p>
+          <p>
+            À 6 h du matin, le CRM lit les relevés déposés, importe les écritures, les rapproche des
+            factures en attente, et archive le fichier traité. Un même relevé déposé deux fois ne
+            crée aucun doublon.
+          </p>
+          <div class="why">
+            <span class="why-label">Pourquoi ce n'est pas automatique aujourd'hui</span>
+            L'automatisation complète passe par l'API bancaire, qui suppose un contrat (voir plus
+            bas). Le dépôt manuel donne exactement les mêmes données, avec un jour de décalage — le
+            relevé porte toujours sur une journée close.
+          </div>
+          <div class="check">
+            <span class="why-label">Comment vérifier</span>
+            Le lendemain matin, l'écran <code>/banque</code> montre les écritures importées : celles
+            qui sont soldées, et celles qui attendent une validation manuelle avec leurs candidats
+            déjà classés.
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Les premières semaines</h2>
+    <p class="lede">
+      Ne pas activer les envois automatiques tout de suite. Voici comment passer en régime de
+      croisière sans mauvaise surprise.
+    </p>
+
+    <p>
+      Pendant deux à trois semaines, laisser <code>BANK_SEND_RECEIPT_ON_AUTO_MATCH=false</code> et
+      relire chaque matin ce que le CRM a décidé. Concrètement, il s'agit de vérifier trois choses :
+    </p>
+    <ul>
+      <li>les factures soldées automatiquement correspondent bien aux virements reçus ;</li>
+      <li>rien de légitime ne reste bloqué en file d'attente sans raison ;</li>
+      <li>
+        aucun virement sans rapport — remboursement, apport, virement interne — n'a soldé une
+        facture par coïncidence de montant.
+      </li>
+    </ul>
+    <p>
+      Quand ces trois points sont acquis sur plusieurs dizaines d'écritures, passer la variable à
+      <code>true</code> : le client recevra alors son reçu automatiquement dès que son paiement est
+      reconnu, comme pour un paiement par carte.
+    </p>
+
+    <h3>Un point à connaître dès maintenant</h3>
+    <p>
+      Dans la file d'attente,
+      <strong>cliquer sur « valider » envoie immédiatement un reçu au client</strong>. Ce n'est pas
+      couvert par le garde-fou ci-dessus, qui ne concerne que les rapprochements automatiques. C'est
+      un geste délibéré et il vaut accord d'envoi — mais mieux vaut le savoir avant de cliquer pour
+      explorer.
+    </p>
+  </section>
+
+  <section>
+    <h2>Une amélioration, quand vous voudrez : le QR-IBAN</h2>
+    <p class="lede">Plus un prérequis, mais un confort — et une question d'usage.</p>
+
+    <p>
+      Le dispositif fonctionne avec l'IBAN actuel, grâce aux références SCOR. Ouvrir un
+      <strong>QR-IBAN</strong> auprès d'UBS reste néanmoins souhaitable à terme : c'est le format
+      dominant des QR-factures en Suisse, celui que les logiciels comptables et les applications
+      bancaires traitent le plus couramment. La demande est gratuite et prend quelques jours ; aucun
+      nouveau compte n'est créé, c'est un second numéro sur le compte existant.
+    </p>
+
+    <p>
+      Demander au passage s'il existe un <strong>numéro d'adhérent</strong> associé : certaines
+      banques en attribuent un, qui se place en préfixe des références. Le CRM le prend en charge
+      par la variable <code>QR_REFERENCE_PREFIX</code>.
+    </p>
+
+    <div class="check">
+      <span class="why-label">Le jour où vous l'obtenez</span>
+      Remplacer <code>COMPANY_IBAN</code> par le QR-IBAN dans la configuration : le CRM bascule seul
+      sur les références à 27 chiffres pour les nouvelles factures. Les factures déjà émises gardent
+      la référence qu'elles portent, et restent rapprochables. Rien d'autre à faire. Un QR-IBAN se
+      reconnaît à son identifiant d'institut, compris entre <span class="mono">30000</span> et
+      <span class="mono">31999</span>.
+    </div>
+  </section>
+
+  <section>
+    <h2>Plus tard : se passer du dépôt manuel</h2>
+    <p class="lede">
+      La suite naturelle, une fois le dispositif éprouvé. À lancer quand l'agence le jugera utile,
+      pas avant.
+    </p>
+
+    <p>
+      UBS expose ses comptes en lecture via <strong>bLink</strong>, la plateforme d'open banking de
+      SIX. Le connecteur est déjà écrit dans le CRM ; seules les démarches manquent :
+    </p>
+    <ul>
+      <li>
+        un contrat SIX en qualité de « Service User » <span class="who who-arnaud">Arnaud</span>
+      </li>
+      <li>
+        un certificat client mTLS, que bLink exige à la place d'un mot de passe applicatif
+        <span class="who who-arnaud">Arnaud</span>
+      </li>
+      <li>
+        l'enregistrement de l'adresse de redirection du CRM dans l'annuaire bLink
+        <span class="who who-toi">Toi</span>
+      </li>
+      <li>
+        un consentement de consultation signé par le titulaire dans l'E-Banking, à renouveler
+        périodiquement <span class="who who-arnaud">Arnaud</span>
+      </li>
+    </ul>
+    <p>
+      Compter plusieurs semaines, essentiellement contractuelles. Le jour où c'est en place, il
+      suffit de changer le connecteur du compte suivi : les écritures déjà importées restent
+      valides, rien d'autre ne bouge. Et la garantie de lecture seule tient toujours — seul le droit
+      de consultation est demandé, et le code rejette explicitement toute autorisation de paiement.
+    </p>
+  </section>
+
+  <section>
+    <h2>Qui fait quoi, en résumé</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Étape</th>
+            <th>Responsable</th>
+            <th>Motif</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Activer le relevé camt.053</td>
+            <td><span class="who who-arnaud">Arnaud</span></td>
+            <td>Exige les accès E-Banking</td>
+          </tr>
+          <tr>
+            <td>Communiquer l'adresse et l'IBAN de l'agence</td>
+            <td><span class="who who-arnaud">Arnaud</span></td>
+            <td>Figurent sur chaque facture</td>
+          </tr>
+          <tr>
+            <td>Configurer le CRM</td>
+            <td><span class="who who-toi">Toi</span></td>
+            <td>Quelques variables</td>
+          </tr>
+          <tr>
+            <td>Déclarer le compte suivi</td>
+            <td><span class="who who-toi">Toi</span></td>
+            <td>Paramétrage applicatif</td>
+          </tr>
+          <tr>
+            <td>Déposer le relevé chaque jour</td>
+            <td><span class="who who-arnaud">Arnaud</span></td>
+            <td>Geste métier récurrent</td>
+          </tr>
+          <tr>
+            <td>Relire les rapprochements</td>
+            <td><span class="who who-arnaud">Arnaud</span></td>
+            <td>Décision comptable</td>
+          </tr>
+          <tr>
+            <td>Demander un QR-IBAN <em>(optionnel)</em></td>
+            <td><span class="who who-arnaud">Arnaud</span></td>
+            <td>Seul le titulaire peut solliciter la banque</td>
+          </tr>
+          <tr>
+            <td>Contrat SIX bLink <em>(plus tard)</em></td>
+            <td><span class="who who-arnaud">Arnaud</span></td>
+            <td>Engagement de la société</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Les lignes confiées à Arnaud sont des <strong>démarches à déclencher</strong>, pas des tâches
+      à exécuter. Les identifier, les expliquer et les relancer fait partie du travail technique :
+      personne ne peut deviner qu'une référence à 27 chiffres exige un QR-IBAN sans avoir regardé le
+      détail du format.
+    </p>
+  </section>
+
+  <section class="status">
+    <h2>Où en est le code</h2>
+    <ul>
+      <li>
+        Module bancaire complet : trois connecteurs, parseur camt.053, moteur de rapprochement,
+        écran de vérification, traitement nocturne.
+      </li>
+      <li>
+        La référence de paiement est attribuée à l'émission de la facture, et la
+        <strong>section paiement avec QR code</strong> est imprimée en bas du document. Les deux
+        formats suisses sont produits — référence QR et référence SCOR — le bon étant choisi d'après
+        l'IBAN configuré.
+      </li>
+      <li>
+        Vérifié contre la base réelle :
+        <strong>100 % de rapprochement automatique sur les paiements référencés</strong> (le seuil
+        demandé était 70 %), sans faux positif. Le QR code produit a été décodé et son contenu est
+        conforme au Swiss Payments Code. Couche HTTP conforme : accès réservé aux administrateurs,
+        aucune route d'écriture vers la banque.
+      </li>
+      <li>
+        Livré sur la branche de travail en deux temps : le module bancaire, puis la QR-facture.
+        L'issue reste <strong>ouverte</strong> — elle ne sera close qu'une fois la liaison
+        réellement en service.
+      </li>
+      <li>
+        Un point de sécurité relevé au passage, sans rapport avec cette issue :
+        <code>JWT_SECRET</code> est absent de la configuration, l'API signe donc ses jetons avec une
+        valeur de repli écrite en clair dans le code. À corriger avant toute mise en ligne.
+      </li>
+    </ul>
+  </section>
+
+  <p class="footnote">
+    Décision d'architecture et détail du moteur de rapprochement :
+    <span class="mono">docs/adr/ADR-004</span>. Vérification reproductible :
+    <span class="mono">npx tsx packages/api/test-bank-reconciliation.ts</span>.
+  </p>
+</div>

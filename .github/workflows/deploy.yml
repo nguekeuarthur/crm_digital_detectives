@@ -1,0 +1,54 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Infomaniak (SSH)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.INFOMANIAK_SSH_HOST }}
+          username: ${{ secrets.INFOMANIAK_SSH_USER }}
+          key: ${{ secrets.INFOMANIAK_SSH_KEY }}
+          port: ${{ secrets.INFOMANIAK_SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd ${{ secrets.INFOMANIAK_DEPLOY_PATH }}
+
+            echo "==> Pulling latest changes..."
+            git pull origin main
+
+            echo "==> Installing production dependencies..."
+            npm ci --workspaces --if-present
+
+            echo "==> Running migrations..."
+            cd packages/api
+            npx prisma migrate deploy
+            cd ../..
+
+            echo "==> Restarting API server..."
+            pm2 restart crm-api --update-env || pm2 start packages/api/dist/index.js --name crm-api
+
+            echo "==> Deployment complete."
