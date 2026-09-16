@@ -174,22 +174,6 @@ router.post('/login-2fa', AuthController.login2FA);
  *                 refreshToken:
  *                   type: string
  *       401:
- *     summary: Rafraîchir l'Access Token
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [refreshToken]
- *             properties:
- *               refreshToken:
- *                 type: string
- *     responses:
- *       200:
- *         description: Nouveaux tokens
- *       401:
  *         description: Refresh token invalide ou expiré
  */
 router.post('/refresh', AuthController.refresh);

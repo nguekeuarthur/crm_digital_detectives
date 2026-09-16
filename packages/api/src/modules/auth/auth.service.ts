@@ -56,9 +56,11 @@ export class AuthService {
   }
 
   static async login(email: string, password: string) {
+    console.log('Login attempt with email:', email);
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
+      console.log('User not found in DB for email:', email);
       throw new Error('Utilisateur non trouvé');
     }
 

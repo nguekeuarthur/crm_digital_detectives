@@ -46,7 +46,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           position="top-right"
           styles={{
             notification: { overflow: 'visible' },
-            icon: { overflow: 'visible' },
           }}
         />
         {children}
