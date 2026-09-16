@@ -5,6 +5,7 @@ export type ServiceDetail = {
   intro?: string;
   paragraphs: string[];
   methods: string[];
+  modules?: string[]; // Codes des modules de prestation (A, B, C...)
 };
 
 export type ServiceSection = {
