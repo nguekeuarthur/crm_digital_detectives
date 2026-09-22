@@ -261,11 +261,43 @@ async function main() {
   const annule = await SignatureService.annuler(contrat3.id);
   verifier('Le contrat passe à WITHDRAWN', annule.status === 'WITHDRAWN');
 
+  // ─── 7 bis. Plancher de niveau de signature ───────────────────────────────
+  titre('7 bis. Plancher de niveau de signature');
+
+  const { qualiteMinimale, qualiteAutorisee } = await import('./src/modules/signature/providers/index.js');
+
+  verifier('Le plancher suit le niveau configuré', qualiteMinimale() === 'QES');
+  verifier('Une demande QES est autorisée', qualiteAutorisee('QES'));
+  verifier('Une demande AES est refusée sous plancher QES', !qualiteAutorisee('AES'));
+  verifier('Une demande SES est refusée sous plancher QES', !qualiteAutorisee('SES'));
+
+  // Le refus doit venir du service, pas seulement de la route : un cron ou un
+  // script contourneraient une vérification posée uniquement à l'entrée HTTP.
+  const contratQ = await prisma.contract.create({
+    data: { mandatId: mandat.id, templateId: template.id, fileId: fichier.id },
+  });
+  let sousPlancherRefuse = false;
+  try {
+    await SignatureService.envoyerPourSignature(contratQ.id, { qualite: 'SES' });
+  } catch {
+    sousPlancherRefuse = true;
+  }
+  verifier('Le service refuse un envoi sous le plancher', sousPlancherRefuse);
+  const apresRefus = await prisma.contract.findUnique({ where: { id: contratQ.id } });
+  verifier('Le contrat refusé reste à DRAFT', apresRefus?.status === 'DRAFT', apresRefus?.status);
+
+  // Plancher abaissé explicitement : la demande passe
+  process.env.SIGNATURE_MIN_QUALITY = 'SES';
+  verifier('Plancher abaissé, une demande SES redevient autorisée', qualiteAutorisee('SES'));
+  const envoiQ = await SignatureService.envoyerPourSignature(contratQ.id, { qualite: 'SES' });
+  verifier('L’envoi en SES aboutit et le niveau est conservé', envoiQ.contrat.signatureQuality === 'SES');
+  delete process.env.SIGNATURE_MIN_QUALITY;
+
   // ─── 8. Journal d'audit ───────────────────────────────────────────────────
   titre('8. Traçabilité');
 
   const journal = await prisma.auditLog.findMany({
-    where: { entity: 'Contract', entityId: { in: [contrat.id, contratC.id, contrat2.id, contrat3.id] } },
+    where: { entity: 'Contract', entityId: { in: [contrat.id, contratC.id, contratQ.id, contrat2.id, contrat3.id] } },
     orderBy: { createdAt: 'asc' },
   });
   for (const e of journal) console.log(`     ${e.action}`);
@@ -283,7 +315,7 @@ async function main() {
   if (GARDER) {
     console.log(`  --garder : données conservées. Client ${EMAIL_ESSAI}, mandat ${mandat.id}`);
   } else {
-    await prisma.auditLog.deleteMany({ where: { entityId: { in: [contrat.id, contratC.id, contrat2.id, contrat3.id] } } });
+    await prisma.auditLog.deleteMany({ where: { entityId: { in: [contrat.id, contratC.id, contratQ.id, contrat2.id, contrat3.id] } } });
     await supprimerMandat(prisma, mandat.id);
     await prisma.contractTemplate.delete({ where: { id: template.id } });
     await prisma.client.delete({ where: { id: client.id } });

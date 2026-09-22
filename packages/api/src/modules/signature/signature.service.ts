@@ -5,7 +5,13 @@ import { ValidationError } from '../../shared/errors';
 import { AuditService } from '../audit/audit.service';
 import { FileService } from '../file/file.service';
 import { MailService } from '../mail/mail.service';
-import { connecteurParDefaut, obtenirConnecteur, qualiteParDefaut } from './providers';
+import {
+  connecteurParDefaut,
+  obtenirConnecteur,
+  qualiteAutorisee,
+  qualiteMinimale,
+  qualiteParDefaut,
+} from './providers';
 import { SignatureProviderError } from './signature.types';
 
 /**
@@ -58,7 +64,16 @@ export class SignatureService {
 
     const kind = connecteurParDefaut();
     const connecteur = obtenirConnecteur(kind);
-    const qualite = options.qualite ?? (qualiteParDefaut() as SignatureQuality);
+    const qualite = options.qualite ?? qualiteParDefaut();
+
+    // Le plancher est vérifié ici, et pas seulement à l'entrée HTTP : aucun
+    // appelant — route, cron, script — ne doit pouvoir faire signer un contrat
+    // à un niveau moins engageant que celui retenu par l'agence.
+    if (!qualiteAutorisee(qualite)) {
+      throw new ValidationError(
+        `Niveau de signature ${qualite} refusé : l'agence exige au minimum ${qualiteMinimale()}.`,
+      );
+    }
 
     // Jeton aléatoire : les retours du prestataire ne sont pas signés, c'est
     // lui qui authentifie l'appel. Il est propre à ce contrat et à usage unique.

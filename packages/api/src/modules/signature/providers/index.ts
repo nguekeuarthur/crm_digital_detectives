@@ -70,6 +70,45 @@ export function obtenirConnecteur(kind: SignatureProvider): SignatureProviderPor
   return connecteur;
 }
 
+/**
+ * Ordre des niveaux, du moins engageant au plus engageant. Sert à comparer une
+ * qualité demandée au plancher : SES ne vérifie aucune identité, QES équivaut
+ * à une signature manuscrite.
+ */
+const RANG: Record<SignatureQuality, number> = {
+  [SignatureQuality.SES]: 0,
+  [SignatureQuality.AES]: 1,
+  [SignatureQuality.QES]: 2,
+};
+
+/**
+ * Niveau minimal que l'agence accepte, quel que soit ce que demande l'appelant.
+ *
+ * Sans plancher, le niveau serait entièrement piloté par le corps de la
+ * requête : un contrat pourrait être fait signer en SES — sans la moindre
+ * vérification d'identité — et finir dans le même état « signé » qu'une QES.
+ * Par défaut le plancher est le niveau configuré, donc on ne peut pas
+ * descendre ; l'abaisser est un geste explicite.
+ */
+export function qualiteMinimale(): SignatureQuality {
+  const brut = (process.env.SIGNATURE_MIN_QUALITY || '').trim().toUpperCase();
+  if (brut === 'SES') return SignatureQuality.SES;
+  if (brut === 'AES') return SignatureQuality.AES;
+  if (brut === 'QES') return SignatureQuality.QES;
+  if (brut) {
+    throw new Error(
+      `SIGNATURE_MIN_QUALITY="${process.env.SIGNATURE_MIN_QUALITY}" est inconnu. ` +
+        'Valeurs acceptées : QES, AES ou SES.',
+    );
+  }
+  return qualiteParDefaut();
+}
+
+/** La qualité demandée atteint-elle le plancher ? */
+export function qualiteAutorisee(demandee: SignatureQuality): boolean {
+  return RANG[demandee] >= RANG[qualiteMinimale()];
+}
+
 /** Niveau de signature demandé par défaut */
 export function qualiteParDefaut(): SignatureQuality {
   const brut = (process.env.SIGNATURE_QUALITY || 'QES').trim().toUpperCase();

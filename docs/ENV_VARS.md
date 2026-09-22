@@ -99,11 +99,14 @@ Ce guide référence toutes les variables d'environnement requises par l'API bac
 > [!IMPORTANT]
 > Tant que `SIGNATURE_PROVIDER` ne vaut pas `SKRIBBLE`, aucun appel n'est émis vers un prestataire et aucune signature n'est facturée. Le passage en production est un geste délibéré.
 
-| Variable                | Type   | Défaut                        | Description                                                                                                                          |
-| ----------------------- | ------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `SIGNATURE_PROVIDER`    | String | `MOCK`                        | `MOCK` (simulation locale) ou `SKRIBBLE` (prestataire réel, abonnement Business requis).                                             |
-| `SIGNATURE_QUALITY`     | String | `QES`                         | Niveau demandé : `QES` (qualifiée, équivaut au manuscrit mais impose une identification du client), `AES` (avancée) ou `SES`.        |
-| `PUBLIC_API_URL`        | URL    | `http://localhost:3000`       | URL publique de l'API, rappelée par le prestataire après signature. En développement, un tunnel (ngrok, cloudflared) est nécessaire. |
-| `SKRIBBLE_API_BASE_URL` | URL    | `https://api.skribble.com/v2` | Racine de l'API Skribble.                                                                                                            |
-| `SKRIBBLE_API_USERNAME` | String | N/A                           | Identifiant d'API Skribble. Requis si `SIGNATURE_PROVIDER=SKRIBBLE`.                                                                 |
-| `SKRIBBLE_API_KEY`      | String | N/A                           | Clé d'API Skribble. Requise si `SIGNATURE_PROVIDER=SKRIBBLE`.                                                                        |
+| Variable                | Type    | Défaut                        | Description                                                                                                                                                          |
+| ----------------------- | ------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SIGNATURE_PROVIDER`    | String  | `MOCK`                        | `MOCK` (simulation locale) ou `SKRIBBLE` (prestataire réel, abonnement Business requis).                                                                             |
+| `SIGNATURE_QUALITY`     | String  | `QES`                         | Niveau demandé : `QES` (qualifiée, équivaut au manuscrit mais impose une identification du client), `AES` (avancée) ou `SES`.                                        |
+| `SIGNATURE_MIN_QUALITY` | String  | valeur de `SIGNATURE_QUALITY` | Plancher appliqué côté serveur : une demande d'un niveau inférieur est refusée, quel que soit l'appelant — route, cron ou script. L'abaisser est un geste explicite. |
+| `PUBLIC_API_URL`        | URL     | `http://localhost:3000`       | URL publique de l'API, rappelée par le prestataire après signature. En développement, un tunnel (ngrok, cloudflared) est nécessaire.                                 |
+| `SKRIBBLE_API_BASE_URL` | URL     | `https://api.skribble.com/v2` | Racine de l'API Skribble.                                                                                                                                            |
+| `SKRIBBLE_API_USERNAME` | String  | N/A                           | Identifiant d'API Skribble. Requis si `SIGNATURE_PROVIDER=SKRIBBLE`.                                                                                                 |
+| `SKRIBBLE_API_KEY`      | String  | N/A                           | Clé d'API Skribble. Requise si `SIGNATURE_PROVIDER=SKRIBBLE`.                                                                                                        |
+| `SKRIBBLE_TIMEOUT_MS`   | Number  | `30000`                       | Plafond d'attente réseau. Sans lui, un prestataire muet bloquerait le rattrapage horaire.                                                                            |
+| `SIGNATURE_ALLOW_MOCK`  | Boolean | `false`                       | Autorise la simulation sous `NODE_ENV=production`. À n'activer qu'en connaissance de cause : les documents produits n'ont aucune valeur juridique.                   |

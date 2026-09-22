@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { ContractController } from './contract.controller';
 import { SignatureController } from '../signature/signature.controller';
-import { authorize } from '../../shared/middlewares';
+import { authorize, authorizeContract } from '../../shared/middlewares';
 
 const router = Router();
 
@@ -63,7 +63,7 @@ router.post('/', authorize('ADMIN', 'ENQUETEUR'), ContractController.generateCon
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/send-for-signature', authorize('ADMIN', 'ENQUETEUR'), SignatureController.envoyerPourSignature);
+router.post('/:id/send-for-signature', authorize('ADMIN', 'ENQUETEUR'), authorizeContract, SignatureController.envoyerPourSignature);
 
 /**
  * @openapi
@@ -74,7 +74,7 @@ router.post('/:id/send-for-signature', authorize('ADMIN', 'ENQUETEUR'), Signatur
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/withdraw-signature', authorize('ADMIN', 'ENQUETEUR'), SignatureController.annuler);
+router.post('/:id/withdraw-signature', authorize('ADMIN', 'ENQUETEUR'), authorizeContract, SignatureController.annuler);
 
 /**
  * @openapi
