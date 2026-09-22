@@ -145,7 +145,8 @@ model File {
   createdAt DateTime   @default(now())
   deletedAt DateTime? // Pour le soft delete
   folder    Dossier    @relation(fields: [folderId], references: [id])
-  contracts Contract[]
+  contracts Contract[] @relation("ContractOriginalFile")
+  signedContracts Contract[] @relation("ContractSignedFile")
 }
 
 model AuditLog {
@@ -433,9 +434,47 @@ model Contract {
   fileId      String // Lien vers le fichier PDF stocké dans le modèle File existant
   generatedAt DateTime @default(now())
 
-  mandat   Mandat           @relation(fields: [mandatId], references: [id], onDelete: Cascade)
-  template ContractTemplate @relation(fields: [templateId], references: [id])
-  file     File             @relation(fields: [fileId], references: [id])
+  // ─── Signature électronique (issue #122) ────────────────────────────────
+  status             ContractStatus     @default(DRAFT)
+  signatureProvider  SignatureProvider?
+  signatureRequestId String?            @unique // Identifiant de la demande chez le prestataire
+  signatureQuality   SignatureQuality? // Niveau demandé au moment de l'envoi
+  // Jeton aléatoire placé dans l'URL de retour : les callbacks du prestataire
+  // ne sont pas signés cryptographiquement, c'est lui qui les authentifie.
+  callbackToken      String?            @unique
+  signerEmail        String? // Destinataire de la demande, figé à l'envoi
+  sentForSignatureAt DateTime?
+  signedAt           DateTime?
+  declinedAt         DateTime?
+  lastError          String? // Dernier motif d'échec, pour l'écran de suivi
+  signedFileId       String? // Document signé archivé à côté de l'original
+
+  mandat     Mandat           @relation(fields: [mandatId], references: [id], onDelete: Cascade)
+  template   ContractTemplate @relation(fields: [templateId], references: [id])
+  file       File             @relation("ContractOriginalFile", fields: [fileId], references: [id])
+  signedFile File?            @relation("ContractSignedFile", fields: [signedFileId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
+
+enum ContractStatus {
+  DRAFT // Généré, pas encore envoyé
+  SENT // Envoyé au client, en attente de signature
+  SIGNED // Signé par toutes les parties, document archivé
+  DECLINED // Refusé par le signataire
+  WITHDRAWN // Demande annulée depuis le CRM
+  ERROR // Échec technique chez le prestataire
+}
+
+enum SignatureProvider {
+  SKRIBBLE // Skribble (SEQ suisse, SCSE/ZertES)
+  MOCK // Simulation locale, pour la mise au point
+}
+
+enum SignatureQuality {
+  SES // Simple : aucune vérification d'identité
+  AES // Avancée : identité vérifiée, pas d'équivalence manuscrite
+  QES // Qualifiée : équivalente à la signature manuscrite (art. 14 al. 2bis CO)
 }
 
 // ─── Facturation et Paiements (Stripe) ─────────────────────────────────

@@ -93,3 +93,17 @@ Ce guide référence toutes les variables d'environnement requises par l'API bac
 | `BLINK_CLIENT_CERT_PATH`      | Path   | N/A                                                            | Certificat client mTLS (PEM) délivré lors de l'onboarding bLink.        |
 | `BLINK_CLIENT_KEY_PATH`       | Path   | N/A                                                            | Clé privée associée au certificat client.                               |
 | `BLINK_CLIENT_KEY_PASSPHRASE` | String | N/A                                                            | Phrase de passe de la clé privée, si protégée.                          |
+
+## Signature électronique (Skribble)
+
+> [!IMPORTANT]
+> Tant que `SIGNATURE_PROVIDER` ne vaut pas `SKRIBBLE`, aucun appel n'est émis vers un prestataire et aucune signature n'est facturée. Le passage en production est un geste délibéré.
+
+| Variable                | Type   | Défaut                        | Description                                                                                                                          |
+| ----------------------- | ------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `SIGNATURE_PROVIDER`    | String | `MOCK`                        | `MOCK` (simulation locale) ou `SKRIBBLE` (prestataire réel, abonnement Business requis).                                             |
+| `SIGNATURE_QUALITY`     | String | `QES`                         | Niveau demandé : `QES` (qualifiée, équivaut au manuscrit mais impose une identification du client), `AES` (avancée) ou `SES`.        |
+| `PUBLIC_API_URL`        | URL    | `http://localhost:3000`       | URL publique de l'API, rappelée par le prestataire après signature. En développement, un tunnel (ngrok, cloudflared) est nécessaire. |
+| `SKRIBBLE_API_BASE_URL` | URL    | `https://api.skribble.com/v2` | Racine de l'API Skribble.                                                                                                            |
+| `SKRIBBLE_API_USERNAME` | String | N/A                           | Identifiant d'API Skribble. Requis si `SIGNATURE_PROVIDER=SKRIBBLE`.                                                                 |
+| `SKRIBBLE_API_KEY`      | String | N/A                           | Clé d'API Skribble. Requise si `SIGNATURE_PROVIDER=SKRIBBLE`.                                                                        |

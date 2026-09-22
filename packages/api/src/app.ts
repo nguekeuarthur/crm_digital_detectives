@@ -38,6 +38,7 @@ import { whatsappPublicRoutes, whatsappProtectedRoutes } from './modules/whatsap
 import { ringoverPublicRoutes } from './modules/ringover/ringover.routes';
 import { nikonRoutes } from './modules/nikon/nikon.routes';
 import { bankingRoutes } from './modules/banking/banking.routes';
+import { signaturePublicRoutes } from './modules/signature/signature.routes';
 import chatbotRoutes from "./routes/chatbotRoutes";
 import chatRoutes from './modules/chat/chat.routes';
 // Les futurs modules seront ajoutés ici :
@@ -160,6 +161,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/webhooks', webhookRouter); // Webhooks WP → CRM (publiques, sécurisées par secret)
 app.use('/api/v1/webhooks', whatsappPublicRoutes); // Webhook WhatsApp Twilio (public, pas de secret WP)
 app.use('/api/v1/webhooks', ringoverPublicRoutes); // Webhook Ringover CTI (public)
+app.use('/api/v1/webhooks', signaturePublicRoutes); // Retour du prestataire de signature (public, jeton dans l'URL)
 app.use('/api/v1/nikon', nikonRoutes);
 app.get('/api/v1/files/download-export/:id', ExportController.downloadExport);
 

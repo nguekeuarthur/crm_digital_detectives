@@ -137,4 +137,24 @@ export const initCronJobs = () => {
       console.error('❌ [CRON] Erreur lors de la synchronisation bancaire :', error);
     }
   });
+
+  // 8. Rattrapage des demandes de signature (toutes les heures)
+  // Un retour de prestataire peut se perdre : sans ce filet, un contrat que le
+  // client a signé resterait indéfiniment affiché « en attente ».
+  cron.schedule('15 * * * *', async () => {
+    try {
+      const { SignatureService } = await import('../modules/signature/signature.service');
+      const resultat = await SignatureService.rafraichirDemandesOuvertes();
+      if (resultat.aboutis > 0) {
+        console.log(
+          `🖊️ [CRON] Signature : ${resultat.aboutis} demande(s) rattrapée(s) sur ${resultat.examines} en cours`
+        );
+      }
+      if (resultat.erreurs.length) {
+        console.warn('⚠️ [CRON] Demandes en erreur :', resultat.erreurs.join(' | '));
+      }
+    } catch (error) {
+      console.error('❌ [CRON] Erreur lors du rattrapage des signatures :', error);
+    }
+  });
 };

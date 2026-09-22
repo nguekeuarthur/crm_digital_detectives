@@ -85,3 +85,20 @@ Ce document répertorie toutes les connexions entre le CRM DigitalDetectives et 
   - Une facture acquittée ne porte pas de section paiement.
 - **Vérification :** `npx tsx packages/api/test-bank-reconciliation.ts` exerce le parseur `camt.053`, les références QR/SCOR, le moteur de décision et la boucle complète facture → relevé bancaire, et mesure le taux de rapprochement automatique. `npx tsx packages/api/essai-qr-facture.ts` vérifie la section paiement dans ses quatre situations.
 - **Mise en service :** la marche à suivre pas à pas, destinée au titulaire du compte autant qu'à l'équipe technique, est dans `docs/Liaison-bancaire-UBS.pdf`. Ce PDF est un produit de construction : modifier `docs/src/liaison-bancaire.html`, régénérer avec `python docs/src/build-pdf.py`, et commiter les deux. Ne pas éditer le PDF directement.
+
+## 7. Skribble (Signature électronique des contrats)
+
+**Rôle :** Faire signer les contrats par le client, avec une valeur juridique en droit suisse.
+
+- **Direction :** CRM → Skribble (création de la demande), Skribble → CRM (retour après signature).
+- **Choix du prestataire :** en droit suisse, seule la **signature électronique qualifiée (SEQ)** équivaut à une signature manuscrite (art. 14 al. 2bis CO), et elle suppose un certificat délivré par un prestataire reconnu au titre de la SCSE — ils sont quatre (Swisscom, DigiCert Switzerland, SwissSign, SIGN8), plus l'OFIT pour l'administration. **Dropbox Sign propose la signature qualifiée au sens eIDAS (UE), pas au sens suisse** : il ne répond donc pas à l'exigence. Skribble porte nativement la SCSE/ZertES, expose une API REST et héberge en Suisse ou en Allemagne.
+- **Niveaux :** `SIGNATURE_QUALITY` vaut `QES` (qualifiée), `AES` (avancée) ou `SES` (simple). La qualifiée impose au client une **identification préalable** (appel vidéo ou eID, ~22.50 CHF une fois) : c'est un frein commercial réel, à mettre en balance avec la valeur probante recherchée. Le contrat de mandat n'exige en principe aucune forme particulière.
+- **Coût :** l'API n'est incluse qu'à partir de l'offre Business/Pro de Skribble, avec un coût par signature. Un essai gratuit de 14 jours donne accès à tout — à n'ouvrir qu'une fois le circuit prêt.
+- **Mode simulation (actif par défaut) :** tant que `SIGNATURE_PROVIDER` ne vaut pas `SKRIBBLE`, le connecteur `MockProvider` rejoue le cycle complet en local, sans appel externe ni signature facturée. Le document qu'il produit porte une page de garde « DOCUMENT DE SIMULATION — aucune valeur juridique ».
+- **Fonctionnement :**
+  - `POST /contracts/:id/send-for-signature` crée la demande et fait adresser au client une invitation par le prestataire. **Le client n'a aucun compte à créer** : son identité est transmise dans `signer_identity_data`.
+  - Le contrat suit son cycle : `DRAFT → SENT → SIGNED | DECLINED | WITHDRAWN | ERROR`. Un contrat déjà envoyé ne peut pas l'être une seconde fois sans annulation préalable.
+  - Au retour, le document signé est archivé **à côté de l'original**, dans le même dossier du mandat, suffixé `_signe.pdf`, puis envoyé au client en confirmation.
+  - Un cron horaire rattrape les demandes dont le retour se serait perdu.
+- **Sécurité :** Skribble n'émet pas de webhook signé cryptographiquement — il appelle les URL fournies à la création. Le CRM y place donc un **jeton aléatoire propre à chaque contrat**, et surtout **ne se fie jamais au contenu de l'appel** : il réinterroge le prestataire pour connaître l'état réel. Un appel forgé ne peut pas faire basculer un contrat en signé. Un jeton inconnu reçoit un `200` (ne pas révéler les jetons valides, ne pas faire boucler le prestataire).
+- **Vérification :** `npx tsx packages/api/essai-122.ts` exerce le circuit complet contre la base — envoi, garde-fous, signature, archivage, idempotence, refus, annulation et journal d'audit — en simulation, sans toucher de client réel.
