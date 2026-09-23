@@ -8,21 +8,22 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconPlus, IconList, IconLayoutKanban, IconSearch,
-  IconCalendar,
+  IconCalendar, IconSignature,
 } from '@tabler/icons-react';
 import { MandatApi, Mandat, MandatStatus } from '../../../shared/api/mandat';
 import { MandatFormModal } from './MandatFormModal';
 import { AssignEnqueteurModal } from './AssignEnqueteurModal';
+import { GenerateContractModal } from './GenerateContractModal';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<MandatStatus, { label: string; color: string; bg: string }> = {
-  OUVERT:             { label: 'Ouvert',               color: 'gray',   bg: '#f1f3f5' },
-  EN_COURS:           { label: 'En cours',             color: 'blue',   bg: '#e7f5ff' },
-  EN_ATTENTE_PREUVES: { label: 'En attente preuves',   color: 'yellow', bg: '#fff9db' },
-  A_VALIDER:          { label: 'À valider',            color: 'orange', bg: '#ffe8cc' },
-  TERMINE:            { label: 'Terminé',              color: 'green',  bg: '#ebfbee' },
-  ANNULE:             { label: 'Annulé',               color: 'red',    bg: '#ffe3e3' },
+const STATUS_CONFIG: Record<MandatStatus, { label: string; color: string; bg: string; border: string }> = {
+  OUVERT:             { label: 'Ouvert',               color: 'gray',   bg: '#e9ecef', border: '#ced4da' },
+  EN_COURS:           { label: 'En cours',             color: 'blue',   bg: '#d0ebff', border: '#a5d8ff' },
+  EN_ATTENTE_PREUVES: { label: 'En attente preuves',   color: 'yellow', bg: '#fff3bf', border: '#ffe066' },
+  A_VALIDER:          { label: 'À valider',            color: 'orange', bg: '#ffd8a8', border: '#ffb366' },
+  TERMINE:            { label: 'Terminé',              color: 'green',  bg: '#d3f9d8', border: '#8ce99a' },
+  ANNULE:             { label: 'Annulé',               color: 'red',    bg: '#ffc9c9', border: '#ff8787' },
 };
 
 const KANBAN_COLUMNS: MandatStatus[] = ['OUVERT', 'EN_COURS', 'EN_ATTENTE_PREUVES', 'A_VALIDER', 'TERMINE'];
@@ -65,7 +66,7 @@ function KanbanCard({
       mb="xs"
       draggable
       onDragStart={() => onDragStart(mandat.id)}
-      style={{ cursor: 'grab' }}
+      style={{ cursor: 'grab', borderColor: '#000000' }}
     >
       <Text size="sm" fw={600} lineClamp={2} mb={4}>{mandat.title}</Text>
       <Text size="xs" c="dimmed" mb={6}>{clientName(mandat)}</Text>
@@ -113,8 +114,9 @@ function KanbanColumn({
         padding="sm"
         radius="md"
         style={{
-          background: over && draggingId ? 'rgba(171,142,61,0.08)' : cfg.bg,
-          borderColor: over && draggingId ? '#AB8E3D' : undefined,
+          background: over && draggingId ? 'rgba(171,142,61,0.12)' : cfg.bg,
+          borderColor: over && draggingId ? '#AB8E3D' : cfg.border,
+          borderWidth: over && draggingId ? 2 : 1,
           minHeight: 400,
           transition: 'background 0.15s, border-color 0.15s',
         }}
@@ -156,6 +158,11 @@ export function MandatsPage() {
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [assignModalOpened, { open: openAssignModal, close: closeAssignModal }] = useDisclosure(false);
   const [selectedMandatForAssign, setSelectedMandatForAssign] = useState<string | null>(null);
+  // Mandat pour lequel on génère un contrat, porté en entier : la modale
+  // affiche son titre et son client pour éviter toute méprise.
+  const [mandatPourContrat, setMandatPourContrat] = useState<
+    { id: string; title: string; clientName?: string } | null
+  >(null);
 
   // Vue persistée en localStorage
   const [view, setView] = useState<'list' | 'kanban'>(
@@ -251,6 +258,12 @@ export function MandatsPage() {
   return (
     <Box p="md">
       <MandatFormModal opened={formOpened} onClose={closeForm} onSuccess={fetchMandats} />
+      <GenerateContractModal
+        opened={mandatPourContrat !== null}
+        onClose={() => setMandatPourContrat(null)}
+        mandat={mandatPourContrat}
+      />
+
       <AssignEnqueteurModal 
         opened={assignModalOpened} 
         onClose={closeAssignModal} 
@@ -385,7 +398,27 @@ export function MandatsPage() {
                         </Group>
                       </Table.Td>
                       <Table.Td>
-                        <Button size="xs" variant="light">Voir</Button>
+                        <Group gap={6} wrap="nowrap" justify="flex-end">
+                          <Tooltip label="Générer un contrat pour ce mandat" withArrow>
+                            <ActionIcon
+                              size="md"
+                              variant="light"
+                              color="yellow"
+                              onClick={() =>
+                                setMandatPourContrat({
+                                  id: m.id,
+                                  title: m.title,
+                                  clientName: m.client
+                                    ? `${m.client.firstName} ${m.client.lastName}`
+                                    : undefined,
+                                })
+                              }
+                            >
+                              <IconSignature size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Button size="xs" variant="light">Voir</Button>
+                        </Group>
                       </Table.Td>
                     </Table.Tr>
                   );
