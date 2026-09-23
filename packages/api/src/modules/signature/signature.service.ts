@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { ContractStatus, SignatureQuality } from '@prisma/client';
+import { ContractStatus, Prisma, SignatureQuality } from '@prisma/client';
 import { prisma } from '../../shared/prisma';
 import { ValidationError } from '../../shared/errors';
 import { AuditService } from '../audit/audit.service';
@@ -320,6 +320,111 @@ export class SignatureService {
     }
 
     return { examines: enCours.length, aboutis, erreurs };
+  }
+
+  /**
+   * Contrats et leur état de signature, pour l'écran de suivi.
+   *
+   * Un ENQUETEUR ne voit que les contrats des mandats qui lui sont assignés :
+   * la même règle que le middleware d'accès, appliquée ici au filtrage — sans
+   * quoi la liste révélerait l'existence de contrats qu'il ne peut pas ouvrir.
+   */
+  static async listerContrats(filtres: {
+    statut?: ContractStatus;
+    mandatId?: string;
+    recherche?: string;
+    page?: number;
+    limite?: number;
+    utilisateur?: { userId: string; role: string };
+  } = {}) {
+    const page = Math.max(1, filtres.page ?? 1);
+    const limite = Math.min(100, Math.max(1, filtres.limite ?? 25));
+
+    const where: Prisma.ContractWhereInput = {};
+    if (filtres.statut) where.status = filtres.statut;
+    if (filtres.mandatId) where.mandatId = filtres.mandatId;
+
+    if (filtres.utilisateur && filtres.utilisateur.role !== 'ADMIN') {
+      where.mandat = { enqueteurId: filtres.utilisateur.userId };
+    }
+
+    if (filtres.recherche) {
+      const terme = filtres.recherche.trim();
+      where.OR = [
+        { mandat: { title: { contains: terme, mode: 'insensitive' } } },
+        { mandat: { client: { lastName: { contains: terme, mode: 'insensitive' } } } },
+        { mandat: { client: { firstName: { contains: terme, mode: 'insensitive' } } } },
+        { mandat: { client: { company: { contains: terme, mode: 'insensitive' } } } },
+        { signerEmail: { contains: terme, mode: 'insensitive' } },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      prisma.contract.findMany({
+        where,
+        orderBy: { generatedAt: 'desc' },
+        skip: (page - 1) * limite,
+        take: limite,
+        select: {
+          id: true,
+          mandatId: true,
+          generatedAt: true,
+          status: true,
+          signatureProvider: true,
+          signatureQuality: true,
+          signerEmail: true,
+          sentForSignatureAt: true,
+          signedAt: true,
+          declinedAt: true,
+          lastError: true,
+          signedFileId: true,
+          // callbackToken volontairement absent : c'est le secret qui
+          // authentifie le webhook public, il ne quitte pas le serveur.
+          file: { select: { id: true, name: true } },
+          signedFile: { select: { id: true, name: true } },
+          template: { select: { name: true } },
+          mandat: {
+            select: {
+              title: true,
+              client: { select: { firstName: true, lastName: true, company: true, email: true } },
+            },
+          },
+        },
+      }),
+      prisma.contract.count({ where }),
+    ]);
+
+    return { items, total, page, pages: Math.max(1, Math.ceil(total / limite)) };
+  }
+
+  /** Compte des contrats par état, pour les tuiles de l'écran de suivi */
+  static async statistiques(utilisateur?: { userId: string; role: string }) {
+    const where: Prisma.ContractWhereInput =
+      utilisateur && utilisateur.role !== 'ADMIN'
+        ? { mandat: { enqueteurId: utilisateur.userId } }
+        : {};
+
+    const parStatut = await prisma.contract.groupBy({
+      by: ['status'],
+      where,
+      _count: { _all: true },
+    });
+
+    const compte = (statut: ContractStatus) =>
+      parStatut.find((e) => e.status === statut)?._count._all ?? 0;
+
+    return {
+      total: parStatut.reduce((somme, e) => somme + e._count._all, 0),
+      brouillon: compte(ContractStatus.DRAFT),
+      enAttente: compte(ContractStatus.SENT),
+      signes: compte(ContractStatus.SIGNED),
+      refuses: compte(ContractStatus.DECLINED),
+      annules: compte(ContractStatus.WITHDRAWN),
+      enErreur: compte(ContractStatus.ERROR),
+      connecteur: connecteurParDefaut(),
+      qualite: qualiteParDefaut(),
+      qualiteMinimale: qualiteMinimale(),
+    };
   }
 
   // ─── Utilitaires ──────────────────────────────────────────────────────────

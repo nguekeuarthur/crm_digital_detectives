@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { SignatureQuality } from '@prisma/client';
+import { ContractStatus, SignatureQuality } from '@prisma/client';
 import { AuthRequest } from '../../shared/middlewares/authenticate';
 import { ValidationError } from '../../shared/errors';
 import { SignatureService } from './signature.service';
@@ -26,7 +26,30 @@ const simulationSchema = z.object({
   issue: z.enum(['signe', 'refuse']).default('signe'),
 });
 
+const listeSchema = z.object({
+  statut: z.nativeEnum(ContractStatus).optional(),
+  mandatId: z.string().optional(),
+  recherche: z.string().max(200).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limite: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 export class SignatureController {
+  /** GET /contracts — suivi des contrats et de leur signature */
+  static async lister(req: AuthRequest, res: Response) {
+    const filtres = listeSchema.parse(req.query ?? {});
+    const resultat = await SignatureService.listerContrats({
+      ...filtres,
+      utilisateur: req.user,
+    });
+    res.json(resultat);
+  }
+
+  /** GET /contracts/signature-stats */
+  static async statistiques(req: AuthRequest, res: Response) {
+    res.json(await SignatureService.statistiques(req.user));
+  }
+
   /** POST /contracts/:id/send-for-signature */
   static async envoyerPourSignature(req: AuthRequest, res: Response) {
     const { qualite, message } = envoiSchema.parse(req.body ?? {});

@@ -21,6 +21,7 @@ const DevisPage = React.lazy(() => import('../../pages/devis/ui/DevisPage').then
 const CatalogPage = React.lazy(() => import('../../pages/catalog/ui/CatalogPage').then(m => ({ default: m.CatalogPage })));
 const BankReconciliationPage = React.lazy(() => import('../../pages/banking/ui/BankReconciliationPage').then(m => ({ default: m.BankReconciliationPage })));
 const BankConnectCallbackPage = React.lazy(() => import('../../pages/banking/ui/BankConnectCallbackPage').then(m => ({ default: m.BankConnectCallbackPage })));
+const ContractSignaturePage = React.lazy(() => import('../../pages/signature/ui/ContractSignaturePage').then(m => ({ default: m.ContractSignaturePage })));
 const CommunicationsPage = React.lazy(() => import('../../pages/communications/ui/CommunicationsPage').then(m => ({ default: m.CommunicationsPage })));
 const DossiersPage = React.lazy(() => import('../../pages/dossiers/ui/DossiersPage').then(m => ({ default: m.DossiersPage })));
 const VisionneusePage = React.lazy(() => import('../../pages/visionneuse/ui/VisionneusePage').then(m => ({ default: m.VisionneusePage })));
@@ -116,6 +117,10 @@ const router = createBrowserRouter([
   {
     path: '/catalogue',
     element: <ProtectedRoute><CatalogPage /></ProtectedRoute>,
+  },
+  {
+    path: '/signatures',
+    element: <ProtectedRoute><ContractSignaturePage /></ProtectedRoute>,
   },
   {
     path: '/banque',

@@ -56,7 +56,8 @@ import {
   IconCash,
   IconMessageCircle,
   IconCategory2,
-  IconBuildingBank
+  IconBuildingBank,
+  IconSignature
 } from '@tabler/icons-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/api/base';
@@ -91,6 +92,7 @@ const navigationItems = [
   { label: 'Mandats', icon: IconBriefcase, href: '/mandats' },
   { label: 'Devis', icon: IconFileInvoice, href: '/devis' },
   { label: 'Catalogue', icon: IconCategory2, href: '/catalogue' },
+  { label: 'Signatures', icon: IconSignature, href: '/signatures' },
   { label: 'Rapprochement bancaire', icon: IconBuildingBank, href: '/banque' },
   { label: 'Planning', icon: IconCalendar, href: '/planning' },
   { label: 'Sous-traitants', icon: IconUserCheck, href: '/subcontractors' },

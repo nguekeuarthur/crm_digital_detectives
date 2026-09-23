@@ -52,6 +52,29 @@ router.post('/', authorize('ADMIN', 'ENQUETEUR'), ContractController.generateCon
 
 /**
  * @openapi
+ * /contracts:
+ *   get:
+ *     summary: Suivi des contrats et de leur état de signature
+ *     description: Un ENQUETEUR ne voit que les contrats des mandats qui lui sont assignés.
+ *     tags: [Contracts]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/', authorize('ADMIN', 'ENQUETEUR'), SignatureController.lister);
+
+/**
+ * @openapi
+ * /contracts/signature-stats:
+ *   get:
+ *     summary: Compte des contrats par état de signature
+ *     tags: [Contracts]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/signature-stats', authorize('ADMIN', 'ENQUETEUR'), SignatureController.statistiques);
+
+/**
+ * @openapi
  * /contracts/{id}/send-for-signature:
  *   post:
  *     summary: Envoyer le contrat au client pour signature électronique
