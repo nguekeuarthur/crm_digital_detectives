@@ -86,25 +86,79 @@ const GOLD_BORDER = 'rgba(171, 142, 61, 0.35)';
 const GOLD_GLOW = 'rgba(171, 142, 61, 0.15)';
 const DARK_BG = 'rgba(17, 17, 17, 0.95)';
 
-const navigationItems = [
+/**
+ * Navigation : deux entrées directes, puis des sections repliables.
+ *
+ * Dix-huit liens à plat obligeaient à parcourir toute la colonne pour trouver
+ * un écran. Le regroupement par thématique ramène la barre à sept éléments au
+ * repos ; seule la section de la page courante s'ouvre.
+ */
+/** Mise en avant du lien courant, identique aux deux niveaux de la barre */
+const styleLien = (actif: boolean) => ({
+  color: actif ? GOLD : '#999',
+  backgroundColor: actif ? 'rgba(171, 142, 61, 0.12)' : 'transparent',
+  borderLeft: actif ? `3px solid ${GOLD}` : 'none',
+  fontWeight: actif ? 600 : 400,
+  marginBottom: '4px',
+  borderRadius: '8px',
+});
+
+type LienNav = { label: string; icon: typeof IconDashboard; href: string };
+type SectionNav = { titre: string; icon: typeof IconDashboard; liens: LienNav[] };
+
+/** Toujours visibles : les deux vues d'ensemble */
+const liensDirects: LienNav[] = [
   { label: 'Dashboard', icon: IconDashboard, href: '/' },
-  { label: 'Clients & Mandats', icon: IconUsers, href: '/clients' },
-  { label: 'Mandats', icon: IconBriefcase, href: '/mandats' },
-  { label: 'Devis', icon: IconFileInvoice, href: '/devis' },
-  { label: 'Catalogue', icon: IconCategory2, href: '/catalogue' },
-  { label: 'Signatures', icon: IconSignature, href: '/signatures' },
-  { label: 'Rapprochement bancaire', icon: IconBuildingBank, href: '/banque' },
-  { label: 'Planning', icon: IconCalendar, href: '/planning' },
-  { label: 'Sous-traitants', icon: IconUserCheck, href: '/subcontractors' },
-  { label: 'Communications', icon: IconPhone, href: '/communications' },
-  { label: 'Chat Live', icon: IconMessageCircle, href: '/chat' },
-  { label: 'Dossiers', icon: IconFolders, href: '/dossiers' },
-  { label: 'Visionneuse EXIF', icon: IconMap, href: '/visionneuse' },
   { label: 'Rapports', icon: IconChartBar, href: '/rapports' },
-  { label: 'Modèles de Mandats', icon: IconFileText, href: '/settings/contracts' },
-  { label: 'Paramètres E-mail', icon: IconMail, href: '/settings/emails' },
-  { label: 'Paramètres Stripe', icon: IconBrandStripe, href: '/settings/stripe' },
-  { label: 'Sécurité (2FA)', icon: IconSettings, href: '/settings/2fa' },
+];
+
+const sectionsNav: SectionNav[] = [
+  {
+    titre: 'Activité',
+    icon: IconBriefcase,
+    liens: [
+      { label: 'Clients & Mandats', icon: IconUsers, href: '/clients' },
+      { label: 'Mandats', icon: IconBriefcase, href: '/mandats' },
+      { label: 'Planning', icon: IconCalendar, href: '/planning' },
+      { label: 'Sous-traitants', icon: IconUserCheck, href: '/subcontractors' },
+    ],
+  },
+  {
+    titre: 'Commercial & finances',
+    icon: IconFileInvoice,
+    liens: [
+      { label: 'Devis', icon: IconFileInvoice, href: '/devis' },
+      { label: 'Catalogue', icon: IconCategory2, href: '/catalogue' },
+      { label: 'Signatures', icon: IconSignature, href: '/signatures' },
+      { label: 'Rapprochement bancaire', icon: IconBuildingBank, href: '/banque' },
+    ],
+  },
+  {
+    titre: 'Preuves & documents',
+    icon: IconFolders,
+    liens: [
+      { label: 'Dossiers', icon: IconFolders, href: '/dossiers' },
+      { label: 'Visionneuse EXIF', icon: IconMap, href: '/visionneuse' },
+    ],
+  },
+  {
+    titre: 'Communication',
+    icon: IconPhone,
+    liens: [
+      { label: 'Communications', icon: IconPhone, href: '/communications' },
+      { label: 'Chat Live', icon: IconMessageCircle, href: '/chat' },
+    ],
+  },
+  {
+    titre: 'Paramètres',
+    icon: IconSettings,
+    liens: [
+      { label: 'Modèles de Mandats', icon: IconFileText, href: '/settings/contracts' },
+      { label: 'Paramètres E-mail', icon: IconMail, href: '/settings/emails' },
+      { label: 'Paramètres Stripe', icon: IconBrandStripe, href: '/settings/stripe' },
+      { label: 'Sécurité (2FA)', icon: IconSettings, href: '/settings/2fa' },
+    ],
+  },
 ];
 
 interface IncomingCallData {
@@ -646,25 +700,55 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Navigation Links */}
           <Box style={{ flex: 1 }}>
-            {navigationItems.map((item) => {
-              const isActive = location.pathname === item.href;
+            {liensDirects.map((item) => (
+              <NavLink
+                key={item.href}
+                label={item.label}
+                leftSection={
+                  <item.icon size={16} color={location.pathname === item.href ? GOLD : '#999'} />
+                }
+                component={Link}
+                to={item.href}
+                active={location.pathname === item.href}
+                style={styleLien(location.pathname === item.href)}
+              />
+            ))}
+
+            {sectionsNav.map((section) => {
+              // La section qui contient la page courante s'ouvre d'elle-même,
+              // sinon l'utilisateur ne verrait pas où il se trouve.
+              const contientPageActive = section.liens.some((l) => l.href === location.pathname);
               return (
                 <NavLink
-                  key={item.href}
-                  label={item.label}
-                  leftSection={<item.icon size={16} color={isActive ? GOLD : '#999'} />}
-                  component={Link}
-                  to={item.href}
-                  active={isActive}
+                  key={section.titre}
+                  label={section.titre}
+                  leftSection={
+                    <section.icon size={16} color={contientPageActive ? GOLD : '#999'} />
+                  }
+                  defaultOpened={contientPageActive}
+                  childrenOffset={16}
                   style={{
-                    color: isActive ? GOLD : '#999',
-                    backgroundColor: isActive ? 'rgba(171, 142, 61, 0.12)' : 'transparent',
-                    borderLeft: isActive ? `3px solid ${GOLD}` : 'none',
-                    fontWeight: isActive ? 600 : 400,
-                    marginBottom: '8px',
+                    color: contientPageActive ? GOLD : '#999',
+                    fontWeight: contientPageActive ? 600 : 400,
+                    marginBottom: '4px',
                     borderRadius: '8px',
                   }}
-                />
+                >
+                  {section.liens.map((item) => {
+                    const actif = location.pathname === item.href;
+                    return (
+                      <NavLink
+                        key={item.href}
+                        label={item.label}
+                        leftSection={<item.icon size={16} color={actif ? GOLD : '#999'} />}
+                        component={Link}
+                        to={item.href}
+                        active={actif}
+                        style={styleLien(actif)}
+                      />
+                    );
+                  })}
+                </NavLink>
               );
             })}
           </Box>
