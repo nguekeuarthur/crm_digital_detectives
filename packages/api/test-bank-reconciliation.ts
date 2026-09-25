@@ -267,6 +267,100 @@ function testCamtParser() {
   });
 }
 
+// ─── 2 bis. Structures réellement produites par UBS ─────────────────────────
+
+/**
+ * Extraits d'un relevé UBS authentique (camt.053.001.08, SPS 2.2), anonymisés.
+ *
+ * Les jeux d'essai fabriqués maison ne prouvaient rien sur le format réel. Deux
+ * écarts sont apparus en confrontant le parseur à un vrai relevé :
+ *  - la contrepartie est sous `Dbtr/Pty/Nm`, pas `Dbtr/Nm` ;
+ *  - sur un versement e-banking, il n'y a pas de `Nm` du tout — le nom occupe
+ *    la première ligne d'adresse. Sans repli, le virement restait anonyme.
+ */
+const CAMT_UBS_REEL = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>UBS-REEL</MsgId><AddtlInf>SPS/2.2</AddtlInf></GrpHdr>
+    <Stmt>
+      <Id>UBS-REEL</Id>
+      <Acct><Id><IBAN>CH920021521521841801D</IBAN></Id><Ccy>CHF</Ccy>
+        <Ownr><Nm>Agence Exemple</Nm></Ownr></Acct>
+      <Ntry>
+        <Amt Ccy="CHF">1500</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+        <BookgDt><Dt>2026-09-18</Dt></BookgDt><ValDt><Dt>2026-09-18</Dt></ValDt>
+        <AcctSvcrRef>9999261ZC2864661</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <Refs><AcctSvcrRef>9999261ZC2864661</AcctSvcrRef><EndToEndId>NOTPROVIDED</EndToEndId></Refs>
+          <Amt Ccy="CHF">1500</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+          <RltdPties><Dbtr><Pty><Nm>Marie Exemple</Nm></Pty></Dbtr></RltdPties>
+          <AddtlTxInf>Payment</AddtlTxInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="CHF">1800</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+        <BookgDt><Dt>2026-09-22</Dt></BookgDt><ValDt><Dt>2026-09-22</Dt></ValDt>
+        <AcctSvcrRef>3074265TO4583991</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <Refs><AcctSvcrRef>3074265TO4583991</AcctSvcrRef></Refs>
+          <Amt Ccy="CHF">1800</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+          <RltdPties><Dbtr><Pty><PstlAdr>
+            <AdrLine>Paul Exemple</AdrLine><AdrLine>1018 Lausanne</AdrLine>
+          </PstlAdr></Pty></Dbtr></RltdPties>
+          <AddtlTxInf>e-banking Credit</AddtlTxInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="CHF">1545</Amt><CdtDbtInd>DBIT</CdtDbtInd>
+        <BookgDt><Dt>2026-09-18</Dt></BookgDt>
+        <AcctSvcrRef>0115261TI9859016</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <Refs><AcctSvcrRef>0115261TI9859016</AcctSvcrRef></Refs>
+          <Amt Ccy="CHF">1545</Amt><CdtDbtInd>DBIT</CdtDbtInd>
+          <RltdPties><Cdtr><Pty><Nm>Regie Exemple SA</Nm></Pty></Cdtr></RltdPties>
+          <RmtInf><Strd><CdtrRefInf>
+            <Tp><CdOrPrtry><Prtry>QRR</Prtry></CdOrPrtry></Tp>
+            <Ref>000000000216666000901040005</Ref>
+          </CdtrRefInf></Strd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>`;
+
+function testCamtUbsReel() {
+  console.log('\n🏦 Relevé UBS authentique');
+
+  const transactions = parseCamtDocument(Buffer.from(CAMT_UBS_REEL, 'utf8')).flatMap(
+    (s) => s.transactions,
+  );
+
+  check('Les trois écritures du relevé sont lues', () => {
+    assert.strictEqual(transactions.length, 3);
+  });
+
+  check('L’IBAN du compte est lu avec sa lettre finale', () => {
+    const releve = parseCamtDocument(Buffer.from(CAMT_UBS_REEL, 'utf8'))[0];
+    assert.strictEqual(releve.iban, 'CH920021521521841801D');
+  });
+
+  check('La contrepartie sous Dbtr/Pty/Nm est reconnue', () => {
+    assert.strictEqual(transactions[0].debtorName, 'Marie Exemple');
+  });
+
+  check('Un versement sans Nm prend le nom en première ligne d’adresse', () => {
+    assert.strictEqual(transactions[1].debtorName, 'Paul Exemple');
+  });
+
+  check('Sur un débit, c’est le bénéficiaire qui est affiché', () => {
+    assert.strictEqual(transactions[2].debtorName, 'Regie Exemple SA');
+  });
+
+  check('La référence QR d’UBS est restituée sans perte', () => {
+    assert.strictEqual(transactions[2].structuredRef, '000000000216666000901040005');
+  });
+}
+
 // ─── 3. Moteur de rapprochement ─────────────────────────────────────────────
 
 interface Scenario {
@@ -569,6 +663,7 @@ console.log('🚀 Validation du rapprochement bancaire (issue #119)');
 
 testQrReference();
 testCamtParser();
+testCamtUbsReel();
 testReconciliationEngine();
 testInvoiceToStatementLoop();
 

@@ -49,6 +49,30 @@ function text(node: XmlNode): string | undefined {
   return value.length ? value : undefined;
 }
 
+/**
+ * Nom d'une partie (donneur d'ordre ou bénéficiaire).
+ *
+ * Trois écritures possibles selon la version du schéma et la banque :
+ * `Dbtr/Nm`, `Dbtr/Pty/Nm`, et — pour les versements e-banking d'UBS — pas de
+ * `Nm` du tout, le nom figurant alors en première ligne d'adresse. Sans ce
+ * dernier repli, un vrai virement client sans référence resterait anonyme et
+ * ne pourrait être rapproché ni automatiquement, ni à l'œil.
+ */
+function nomDePartie(partie: XmlNode): string | undefined {
+  if (!partie || typeof partie !== 'object') return undefined;
+
+  const direct = text(partie.Nm) ?? text(partie.Pty?.Nm);
+  if (direct) return direct;
+
+  const adresse = partie.Pty?.PstlAdr ?? partie.PstlAdr;
+  const lignes = toArray(adresse?.AdrLine)
+    .map((l) => text(l))
+    .filter((l): l is string => Boolean(l));
+
+  // La première ligne porte le nom, les suivantes le code postal et la ville
+  return lignes[0];
+}
+
 /** Lit une date ISO 20022 (<Dt> ou <DtTm>) */
 function readDate(node: XmlNode): Date | undefined {
   const raw = text(node?.Dt) ?? text(node?.DtTm) ?? text(node);
@@ -122,7 +146,12 @@ function parseStatement(statement: XmlNode): ParsedStatement {
         text(detail?.Refs?.TxId) ??
         (details.length > 1 ? undefined : entryReference);
 
-      const debtorName = text(detail?.RltdPties?.Dbtr?.Nm) ?? text(detail?.RltdPties?.Dbtr?.Pty?.Nm);
+      // Sur un crédit c'est le donneur d'ordre qui nous intéresse ; sur un
+      // débit, le bénéficiaire — sans quoi la file d'attente n'afficherait
+      // qu'une ligne anonyme pour les paiements sortants.
+      const sens = (text(detail?.CdtDbtInd) ?? entryCreditDebit) as CreditDebitIndicator;
+      const contrepartie = sens === 'CRDT' ? detail?.RltdPties?.Dbtr : detail?.RltdPties?.Cdtr;
+      const debtorName = nomDePartie(contrepartie) ?? nomDePartie(detail?.RltdPties?.UltmtDbtr);
       const debtorIban = text(detail?.RltdPties?.DbtrAcct?.Id?.IBAN);
 
       transactions.push({
