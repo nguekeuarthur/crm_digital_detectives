@@ -1,0 +1,112 @@
+# Variables d'Environnement
+
+Ce guide référence toutes les variables d'environnement requises par l'API backend du CRM DigitalDetectives. Elles doivent être configurées dans un fichier `.env` à la racine de `packages/api/`.
+
+> [!WARNING]
+> Ne commitez jamais votre fichier `.env` ! Utilisez `.env.example` pour partager la structure.
+
+## Configuration Système & Sécurité
+
+| Variable         | Type   | Défaut        | Description                                                                          |
+| ---------------- | ------ | ------------- | ------------------------------------------------------------------------------------ |
+| `PORT`           | Number | `3000`        | Le port d'écoute du serveur Express.                                                 |
+| `NODE_ENV`       | String | `development` | L'environnement d'exécution (`development` ou `production`).                         |
+| `DATABASE_URL`   | URI    | N/A           | L'URL de connexion à la base de données PostgreSQL via Prisma.                       |
+| `JWT_SECRET`     | String | N/A           | La clé secrète pour signer les jetons d'authentification principaux (Access Tokens). |
+| `REFRESH_SECRET` | String | N/A           | La clé secrète pour signer les jetons de rafraîchissement (Refresh Tokens).          |
+
+## Stockage & Fichiers
+
+| Variable           | Type         | Défaut      | Description                                                            |
+| ------------------ | ------------ | ----------- | ---------------------------------------------------------------------- |
+| `STORAGE_STRATEGY` | String       | `LOCAL`     | Stratégie de stockage des preuves. Valeurs possibles: `LOCAL` ou `S3`. |
+| `STORAGE_PATH`     | Path         | `./uploads` | Le chemin de stockage local (utilisé si `STORAGE_STRATEGY=LOCAL`).     |
+| `ENCRYPTION_KEY`   | String (32b) | N/A         | Clé de chiffrement AES-256 pour sécuriser les fichiers sensibles.      |
+| `S3_ENDPOINT`      | URL          | N/A         | Endpoint du service S3 (ex: `https://s3.cloud.infomaniak.com`).        |
+| `S3_REGION`        | String       | `lyon`      | La région d'hébergement S3.                                            |
+| `S3_ACCESS_KEY`    | String       | N/A         | Clé d'accès S3 (Access Key ID).                                        |
+| `S3_SECRET_KEY`    | String       | N/A         | Clé secrète S3 (Secret Access Key).                                    |
+| `S3_BUCKET`        | String       | N/A         | Le nom du bucket S3 dans lequel les preuves seront stockées.           |
+
+## Communication (E-mail & WhatsApp)
+
+| Variable                 | Type   | Défaut | Description                                                                  |
+| ------------------------ | ------ | ------ | ---------------------------------------------------------------------------- |
+| `SMTP_HOST`              | String | N/A    | Hôte SMTP pour l'envoi d'e-mails (ex: `mail.infomaniak.com`).                |
+| `SMTP_PORT`              | Number | `587`  | Port SMTP (587 pour TLS).                                                    |
+| `SMTP_USER`              | String | N/A    | Nom d'utilisateur SMTP (généralement l'adresse e-mail).                      |
+| `SMTP_PASS`              | String | N/A    | Mot de passe SMTP ou mot de passe d'application.                             |
+| `SMTP_FROM`              | String | N/A    | Adresse e-mail d'expédition par défaut (ex: `noreply@digitaldetectives.ch`). |
+| `IMAP_HOST`              | String | N/A    | Hôte IMAP pour la lecture d'e-mails entrants (ex: `mail.infomaniak.com`).    |
+| `IMAP_PORT`              | Number | `993`  | Port IMAP (993 pour SSL).                                                    |
+| `TWILIO_ACCOUNT_SID`     | String | N/A    | Identifiant du compte Twilio pour WhatsApp.                                  |
+| `TWILIO_AUTH_TOKEN`      | String | N/A    | Jeton d'authentification Twilio.                                             |
+| `TWILIO_WHATSAPP_NUMBER` | String | N/A    | Numéro WhatsApp expéditeur (ex: `whatsapp:+14155238886`).                    |
+
+## Intégrations Externes (WordPress, Nikon, Stripe)
+
+| Variable                | Type   | Défaut | Description                                                               |
+| ----------------------- | ------ | ------ | ------------------------------------------------------------------------- |
+| `WP_URL`                | URL    | N/A    | L'URL du site vitrine WordPress (pour l'API REST).                        |
+| `WP_WEBHOOK_URL`        | URL    | N/A    | URL cible pour envoyer des webhooks au plugin WPWebhooks.                 |
+| `WP_USERNAME`           | String | N/A    | Nom d'utilisateur WordPress pour l'API REST.                              |
+| `WP_APP_PASSWORD`       | String | N/A    | Mot de passe d'application généré dans WordPress.                         |
+| `NIKON_API_KEY`         | String | N/A    | Clé secrète permettant d'authentifier les webhooks venant de Nikon Cloud. |
+| `STRIPE_SECRET_KEY`     | String | N/A    | Clé API secrète de Stripe (`sk_live_...` ou `sk_test_...`).               |
+| `STRIPE_WEBHOOK_SECRET` | String | N/A    | Clé secrète de signature des webhooks Stripe (`whsec_...`).               |
+
+## Connexion Bancaire (UBS / SIX bLink, lecture seule)
+
+> [!IMPORTANT]
+> La connexion bancaire est strictement en lecture. Seul le scope AIS (`urn:blink:xs2a:ais`) est demandé ; tout scope de paiement est rejeté par l'API.
+
+| Variable                          | Type    | Défaut                  | Description                                                                                                                                                                             |
+| --------------------------------- | ------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BANK_PROVIDER`                   | String  | `CAMT_FILE`             | Connecteur par défaut d'un nouveau compte : `UBS_BLINK`, `CAMT_FILE` ou `MOCK`.                                                                                                         |
+| `BANK_CAMT_IMPORT_DIR`            | Path    | `./storage/bank-import` | Dossier de dépôt des relevés camt.053 (mode `CAMT_FILE`). Les fichiers traités sont archivés dans `processed/`.                                                                         |
+| `BANK_SYNC_LOOKBACK_DAYS`         | Number  | `30`                    | Profondeur d'historique relue à chaque synchronisation.                                                                                                                                 |
+| `BANK_AUTO_MATCH_THRESHOLD`       | Number  | `0.9`                   | Score minimal (0 → 1) pour solder une facture sans intervention humaine.                                                                                                                |
+| `BANK_SUGGEST_THRESHOLD`          | Number  | `0.5`                   | Score minimal pour proposer un candidat dans la file d'attente.                                                                                                                         |
+| `BANK_AMBIGUITY_MARGIN`           | Number  | `0.15`                  | Écart minimal avec le 2e candidat pour valider automatiquement.                                                                                                                         |
+| `BANK_SEND_RECEIPT_ON_AUTO_MATCH` | Boolean | `true`                  | Envoi du reçu PDF au client lors d'un rapprochement automatique.                                                                                                                        |
+| `QR_REFERENCE_PREFIX`             | String  | (vide)                  | Préfixe (numéro d'adhérent) des références QR générées pour les factures.                                                                                                               |
+| `COMPANY_NAME`                    | String  | `Digitaldetectives`     | Nom du bénéficiaire, sur la QR-facture et le bloc de virement.                                                                                                                          |
+| `COMPANY_IBAN`                    | String  | (vide)                  | Compte à créditer. Un **QR-IBAN** (institut 30000–31999) impose des références QR à 27 chiffres ; un IBAN ordinaire impose des références SCOR (`RF…`). Le format suit automatiquement. |
+| `COMPANY_STREET`                  | String  | (vide)                  | Rue du bénéficiaire. **Requis** pour la section paiement.                                                                                                                               |
+| `COMPANY_BUILDING_NUMBER`         | String  | (vide)                  | Numéro de rue du bénéficiaire (facultatif).                                                                                                                                             |
+| `COMPANY_POSTAL_CODE`             | String  | (vide)                  | NPA du bénéficiaire. **Requis** pour la section paiement.                                                                                                                               |
+| `COMPANY_CITY`                    | String  | (vide)                  | Localité du bénéficiaire. **Requis** pour la section paiement.                                                                                                                          |
+| `COMPANY_COUNTRY`                 | String  | `CH`                    | Code pays du bénéficiaire (2 lettres).                                                                                                                                                  |
+| `BANK_MOCK_IBAN`                  | String  | `CH5604835012345678009` | IBAN utilisé par le connecteur de démonstration.                                                                                                                                        |
+
+### Spécifique bLink (requis uniquement si `BANK_PROVIDER=UBS_BLINK`)
+
+| Variable                      | Type   | Défaut                                                         | Description                                                             |
+| ----------------------------- | ------ | -------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `BLINK_API_BASE_URL`          | URL    | `https://api.six-group.com/api/bankingservices/b-link-xs2a/v1` | Base des endpoints AIS.                                                 |
+| `BLINK_AUTHORIZATION_URL`     | URL    | N/A                                                            | Endpoint d'autorisation du fournisseur (UBS), fourni par SIX.           |
+| `BLINK_TOKEN_URL`             | URL    | endpoint bLink v2                                              | Endpoint d'échange de jetons du _consent flow_.                         |
+| `BLINK_CLIENT_ID`             | String | N/A                                                            | `client_id` du CRM dans l'annuaire bLink (30 caractères max).           |
+| `BLINK_PROVIDER_ID`           | String | N/A                                                            | `provider_id` de la banque (UBS) dans l'annuaire bLink.                 |
+| `BLINK_REDIRECT_URI`          | URL    | N/A                                                            | URL de redirection après consentement (doit être enregistrée chez SIX). |
+| `BLINK_USERNAME`              | String | N/A                                                            | Identifiant E-Banking du titulaire utilisé pour le consentement.        |
+| `BLINK_CLIENT_CERT_PATH`      | Path   | N/A                                                            | Certificat client mTLS (PEM) délivré lors de l'onboarding bLink.        |
+| `BLINK_CLIENT_KEY_PATH`       | Path   | N/A                                                            | Clé privée associée au certificat client.                               |
+| `BLINK_CLIENT_KEY_PASSPHRASE` | String | N/A                                                            | Phrase de passe de la clé privée, si protégée.                          |
+
+## Signature électronique (Skribble)
+
+> [!IMPORTANT]
+> Tant que `SIGNATURE_PROVIDER` ne vaut pas `SKRIBBLE`, aucun appel n'est émis vers un prestataire et aucune signature n'est facturée. Le passage en production est un geste délibéré.
+
+| Variable                | Type    | Défaut                        | Description                                                                                                                                                          |
+| ----------------------- | ------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SIGNATURE_PROVIDER`    | String  | `MOCK`                        | `MOCK` (simulation locale) ou `SKRIBBLE` (prestataire réel, abonnement Business requis).                                                                             |
+| `SIGNATURE_QUALITY`     | String  | `QES`                         | Niveau demandé : `QES` (qualifiée, équivaut au manuscrit mais impose une identification du client), `AES` (avancée) ou `SES`.                                        |
+| `SIGNATURE_MIN_QUALITY` | String  | valeur de `SIGNATURE_QUALITY` | Plancher appliqué côté serveur : une demande d'un niveau inférieur est refusée, quel que soit l'appelant — route, cron ou script. L'abaisser est un geste explicite. |
+| `PUBLIC_API_URL`        | URL     | `http://localhost:3000`       | URL publique de l'API, rappelée par le prestataire après signature. En développement, un tunnel (ngrok, cloudflared) est nécessaire.                                 |
+| `SKRIBBLE_API_BASE_URL` | URL     | `https://api.skribble.com/v2` | Racine de l'API Skribble.                                                                                                                                            |
+| `SKRIBBLE_API_USERNAME` | String  | N/A                           | Identifiant d'API Skribble. Requis si `SIGNATURE_PROVIDER=SKRIBBLE`.                                                                                                 |
+| `SKRIBBLE_API_KEY`      | String  | N/A                           | Clé d'API Skribble. Requise si `SIGNATURE_PROVIDER=SKRIBBLE`.                                                                                                        |
+| `SKRIBBLE_TIMEOUT_MS`   | Number  | `30000`                       | Plafond d'attente réseau. Sans lui, un prestataire muet bloquerait le rattrapage horaire.                                                                            |
+| `SIGNATURE_ALLOW_MOCK`  | Boolean | `false`                       | Autorise la simulation sous `NODE_ENV=production`. À n'activer qu'en connaissance de cause : les documents produits n'ont aucune valeur juridique.                   |

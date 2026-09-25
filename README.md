@@ -1,69 +1,91 @@
-# CRM DigitalDetectives
+# CRM DigitalDetectives 🕵️‍♂️
 
-## Contexte
+![CI](https://github.com/nguekeuarthur/crm_digital_detectives/actions/workflows/ci.yml/badge.svg)
+![Deploy](https://github.com/nguekeuarthur/crm_digital_detectives/actions/workflows/deploy.yml/badge.svg)
 
-Ce repository initialise le projet CRM DigitalDetectives en architecture monorepo.
+## 📌 Présentation
 
-- `packages/api` : backend Node.js / Express
-- `packages/web` : frontend React / Vite
+DigitalDetectives est un CRM sur-mesure conçu pour les agences d'investigation. 
+Il centralise la gestion des mandats, la facturation, l'affectation des sous-traitants, la synchronisation automatique des preuves photos (depuis le Cloud Nikon), et la communication unifiée (Emails, WhatsApp, Téléphonie CTI).
 
-## Prerequis
+## 🛠️ Stack Technique
 
-- Node.js `20.11.0` (voir `.nvmrc`)
-- npm `>=10`
+Ce projet utilise une architecture **Monorepo** avec des espaces de travail (Workspaces).
 
-## Installation
+* **Frontend** : React 18, Vite, Zustand (State), React Router v6, Mantine UI (Thème Dark & Gold).
+* **Backend** : Node.js, Express, TypeScript.
+* **Base de données** : PostgreSQL gérée via Prisma ORM.
 
-```bash
-npm install
+Pour explorer en profondeur le fonctionnement du projet, référez-vous au dossier `/docs` qui contient :
+- [Architecture C4 (Système, Conteneurs, Composants)](./docs/architecture.md)
+- [Modèle de Données (ERD Prisma)](./docs/DATA_MODEL.md)
+- [Intégrations Externes (Stripe, WP, Ringover, Nikon...)](./docs/INTEGRATIONS.md)
+- [Variables d'Environnement](./docs/ENV_VARS.md)
+
+Consultez également les README spécifiques de chaque module :
+- [Backend (API)](./packages/api/README.md)
+- [Frontend (Web)](./packages/web/README.md)
+
+## 📦 Structure des Dossiers
+
+```
+crm_digital_detectives/
+│
+├── packages/
+│   ├── api/            # Backend (Express / Node.js)
+│   │   ├── prisma/     # Schéma de base de données
+│   │   ├── src/
+│   │   │   └── modules/ # Logique métier segmentée par domaine (auth, mail, billing)
+│   │
+│   └── web/            # Frontend (React / Vite)
+│       ├── src/
+│       │   ├── app/     # Configuration globale (Routeur, Providers)
+│       │   ├── pages/   # Pages de l'application
+│       │   ├── features/# Logique métier (Stores, Hooks)
+│       │   └── widgets/ # Composants complexes (Layout, Tableaux)
+│
+├── docs/               # Documentation (C4, ADR, Base de données)
+├── CONTRIBUTING.md     # Guide pour les développeurs
+└── package.json        # Fichier racine du monorepo
 ```
 
-## Scripts racine
+## 🚀 Démarrage Rapide
 
-- `npm run dev` : lance les scripts `dev` de tous les workspaces
-- `npm run build` : lance les scripts `build` de tous les workspaces
-- `npm run test` : lance les scripts `test` de tous les workspaces
-- `npm run lint` : lance les scripts `lint` de tous les workspaces
-- `npm run lint:fix` : corrige automatiquement les erreurs ESLint
-- `npm run format` : formate le code avec Prettier
-- `npm run format:check` : verifie le formatage sans modifier les fichiers
+### Prérequis stricts
+* **Node.js** : `>= 20.11.0` (utiliser `nvm use` si vous avez NVM d'installé).
+* **PostgreSQL** : En cours d'exécution en local (ou via Docker).
 
-## Qualite et commits
+### Installation
 
-- ESLint est configure avec la base Standard et les plugins React/React Hooks.
-- Prettier est integre via `eslint-config-prettier`.
-- Husky + lint-staged lancent le lint/format sur les fichiers stagés au `pre-commit`.
-- Commitlint valide les messages de commit au format Conventional Commits.
+1. Clonez le dépôt et installez les dépendances à la racine (installe pour `api` et `web`) :
+   ```bash
+   npm install
+   ```
 
-Types de commit recommandes :
+2. Configurez l'environnement :
+   Copiez les fichiers `.env.example` en `.env` dans `packages/api` et `packages/web`.
+   Assurez-vous que l'URL de la base de données est correcte dans `packages/api/.env`.
 
-- `feat`: nouvelle fonctionnalite
-- `fix`: correction de bug
-- `chore`: tache technique ou maintenance
-- `docs`: documentation
-- `test`: ajout ou mise a jour de tests
+3. Préparez la base de données (migrations Prisma) :
+   ```bash
+   npm run prisma:generate --workspace=packages/api
+   npm run prisma:migrate --workspace=packages/api
+   ```
 
-Exemples :
+### Lancement en développement
 
-- `feat(api): ajouter endpoint de sante`
-- `fix(web): corriger rendu du dashboard`
-- `docs(readme): ajouter conventions de commit`
-
-## Demarrage
-
+Pour lancer simultanément le backend et le frontend :
 ```bash
 npm run dev
 ```
 
-## Structure
+* Le frontend sera accessible sur : **http://localhost:5173**
+* Le backend (API) sera accessible sur : **http://localhost:3000**
+* La documentation Swagger de l'API sur : **http://localhost:3000/api/docs** (Accès limité aux ADMIN)
 
-```text
-.
-├─ packages/
-│  ├─ api/
-│  └─ web/
-├─ .gitignore
-├─ .nvmrc
-├─ package.json
-└─ README.md
+## 🤝 Contribution
+
+Avant de créer une Pull Request, assurez-vous de lire le fichier [CONTRIBUTING.md](./CONTRIBUTING.md) et de lancer le linter localement :
+```bash
+npm run lint
 ```
